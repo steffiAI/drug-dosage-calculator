@@ -17,7 +17,6 @@ data/
 build/
 dist/
 *.exe
-*.spec
 
 # IDE
 .vscode/
