@@ -25,14 +25,15 @@ A Python GUI application for calculating drug solution preparations in laborator
 ## Requirements
 
 - **Python**: 3.11+
-- **OS**: Windows 11, macOS 12+, or Ubuntu 22.04+
+- **OS**: Windows 11 (tested), likely compatible with macOS/Linux but not yet verified
 - **Dependencies**: Only Python standard library (tkinter)
 
 ## Installation
 
-### Option 1: Using the Executable (Windows)
+### Option 1: Using the Executable (Windows Only)
 1. Download the latest `.exe` file from the [Releases](https://github.com/steffiAI/drug-dosage-calculator/releases) page
 2. Double-click to run - no installation needed!
+3. **Note:** macOS/Linux users should use Option 2 (run from source)
 
 ### Option 2: Running from Source
 
