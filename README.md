@@ -130,7 +130,7 @@ pyinstaller --onefile --windowed --name "DrugCalculator" main.py
 
 ## Contributing
 
-Contributions are welcome! This project is maintained by a PhD candidate to help researchers streamline their lab workflows.
+Contributions are welcome! This project is maintained by a researcher to help other researchers streamline their lab workflows.
 
 **Areas for contribution:**
 - Additional calculator types
