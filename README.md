@@ -82,7 +82,7 @@ Use this to dilute stock solutions to working concentrations:
 2. Enter:
    - Drug name
    - Stock concentration (with unit)
-   - Target concentration (with unit - must match stock unit)
+   - Target concentration (with unit - must be lower than stock concentration)
    - Desired volume (with unit)
    - Solvent type
 3. Click "Calculate"
