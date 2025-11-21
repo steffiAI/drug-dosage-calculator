@@ -25,14 +25,15 @@ A Python GUI application for calculating drug solution preparations in laborator
 ## Requirements
 
 - **Python**: 3.11+
-- **OS**: Windows 11, macOS 12+, or Ubuntu 22.04+
+- **OS**: Windows 11 (tested), likely compatible with macOS/Linux but not yet verified
 - **Dependencies**: Only Python standard library (tkinter)
 
 ## Installation
 
-### Option 1: Using the Executable (Windows)
+### Option 1: Using the Executable (Windows Only)
 1. Download the latest `.exe` file from the [Releases](https://github.com/steffiAI/drug-dosage-calculator/releases) page
 2. Double-click to run - no installation needed!
+3. **Note:** macOS/Linux users should use Option 2 (run from source)
 
 ### Option 2: Running from Source
 
@@ -81,7 +82,7 @@ Use this to dilute stock solutions to working concentrations:
 2. Enter:
    - Drug name
    - Stock concentration (with unit)
-   - Target concentration (with unit - must match stock unit)
+   - Target concentration (with unit - must be lower than stock concentration)
    - Desired volume (with unit)
    - Solvent type
 3. Click "Calculate"
@@ -129,7 +130,7 @@ pyinstaller --onefile --windowed --name "DrugCalculator" main.py
 
 ## Contributing
 
-Contributions are welcome! This project is maintained by a PhD candidate to help researchers streamline their lab workflows.
+Contributions are welcome! This project is maintained by a researcher to help other researchers streamline their lab workflows.
 
 **Areas for contribution:**
 - Additional calculator types
