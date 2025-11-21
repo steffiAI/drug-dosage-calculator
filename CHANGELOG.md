@@ -5,6 +5,46 @@ All notable changes to the Drug Dosage Calculator will be documented in this fil
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2025-11-21
+
+### Added
+- **Smart Decimal Formatting**: Dynamic precision based on measurement accuracy
+  - Values < 10: 2 decimal places (e.g., 5.23 µl)
+  - Values 10-100: 1 decimal place (e.g., 25.8 µl)
+  - Values > 100: no decimals (e.g., 499 µl)
+  - No more misleading trailing zeros (499.0000 → 499)
+- **Input Validation for Decimal Separators**: Detects comma vs period usage
+  - Catches German locale comma confusion (5,2 vs 5.2)
+  - Clear error message: "Please use period (.) for decimals, not comma (,)"
+  - Prevents program crashes from invalid float conversion
+- **Interactive Tooltips**: Hover guidance system for input fields
+  - ℹ️ info icons next to numeric input fields
+  - Light yellow tooltip appears on hover
+  - Reminds users to use period (.) for decimals
+- **Formatters Module** (`src/formatters.py`): Centralized number formatting utilities
+  - `format_number()`: Smart rounding based on value magnitude
+  - `validate_decimal_input()`: Input validation with helpful error messages
+  - `format_result_with_unit()`: Consistent number + unit formatting
+  - Reusable across all calculators
+
+### Changed
+- **Default Volume Unit**: Changed from mL to µL for better lab workflow consistency
+  - Stock solution calculator now defaults to µL
+  - Working solution calculator now defaults to µL
+  - Aligns with typical pipetting volumes in cell culture
+- **Error Messages**: More specific and actionable validation errors
+  - Now indicates which field has the error
+  - Provides example of correct format
+- **Results Display**: Cleaner, more professional number presentation
+  - Removed gram weight from popup display (kept in history for records)
+  - All values now show appropriate precision
+  - More scannable and less cluttered
+
+### Technical
+- Added `ToolTip` class for GUI hover help
+- Implements pipette precision guidelines (P1000, P200, P20 accuracy standards)
+- Better separation of concerns (formatting logic separated from GUI)
+
 ## [1.1.1] - 2025-11-09
 
 ### Fixed
@@ -114,29 +154,30 @@ We use Semantic Versioning:
 - **MINOR** version (0.X.0): New functionality (backwards-compatible)
 - **PATCH** version (0.0.X): Bug fixes (backwards-compatible)
 
-Current: v1.1.1
+Current: v1.2.0
 
 ---
 
 ## Upcoming Features (Planned)
 
 ### Phase 2
-- [ ] Serial dilution calculator
-- [ ] Enhanced history viewer with filtering
+- [ ] Enhanced history viewer with compact layout
+- [ ] PDF export with formatted protocols
 - [ ] Selection and batch export from history
+- [ ] Serial dilution calculator
 - [ ] Improved unit handling and conversion display
 
 ### Phase 3
-- [ ] PDF export with formatted protocols
 - [ ] PubChem API integration for automatic MW lookup
 - [ ] Drug identifiers support (CAS number, Catalog #, RRID)
 - [ ] Custom drug database
 - [ ] Aliquot calculator
+- [ ] Interactive calculation history with filtering
 
 ---
 
 ## Links
 
-- [Repository](https://github.com/YOUR_USERNAME/drug-dosage-calculator)
-- [Issues](https://github.com/YOUR_USERNAME/drug-dosage-calculator/issues)
-- [Releases](https://github.com/YOUR_USERNAME/drug-dosage-calculator/releases)
+- [Repository](https://github.com/steffiAI/drug-dosage-calculator)
+- [Issues](https://github.com/steffiAI/drug-dosage-calculator/issues)
+- [Releases](https://github.com/steffiAI/drug-dosage-calculator/releases)
