@@ -14,6 +14,69 @@ sys.path.insert(0, str(Path(__file__).parent / "src"))
 
 from calculators import calculate_stock_from_powder, calculate_dilution, validate_inputs
 from data_storage import CalculationHistory
+from formatters import format_number, validate_decimal_input, format_result_with_unit
+
+
+class ToolTip:
+    """
+    Creates a tooltip (hover text) for a tkinter widget.
+    
+    How it works:
+    - When mouse enters widget → show tooltip
+    - When mouse leaves widget → hide tooltip
+    - Creates temporary window for the tooltip text
+    
+    Parameters
+    ----------
+    widget : tkinter widget
+        The widget to attach the tooltip to (e.g., a Label or Button)
+    text : str
+        The text to display in the tooltip
+    
+    Example
+    -------
+    info_icon = ttk.Label(frame, text="ℹ️")
+    ToolTip(info_icon, "Use period (.) for decimal numbers")
+    """
+    def __init__(self, widget, text):
+        self.widget = widget
+        self.text = text
+        self.tooltip_window = None
+        
+        # Bind hover events
+        self.widget.bind("<Enter>", self.show_tooltip)
+        self.widget.bind("<Leave>", self.hide_tooltip)
+    
+    def show_tooltip(self, event=None):
+        """Display the tooltip when mouse enters widget."""
+        if self.tooltip_window:
+            return
+        
+        # Position tooltip near the widget
+        x = self.widget.winfo_rootx() + 20
+        y = self.widget.winfo_rooty() + 20
+        
+        # Create tooltip window
+        self.tooltip_window = tk.Toplevel(self.widget)
+        self.tooltip_window.wm_overrideredirect(True)  # Remove window decorations
+        self.tooltip_window.wm_geometry(f"+{x}+{y}")
+        
+        # Tooltip content with light yellow background
+        label = ttk.Label(
+            self.tooltip_window,
+            text=self.text,
+            background="lightyellow",
+            relief="solid",
+            borderwidth=1,
+            padding=5
+        )
+        label.pack()
+    
+    def hide_tooltip(self, event=None):
+        """Hide the tooltip when mouse leaves widget."""
+        if self.tooltip_window:
+            self.tooltip_window.destroy()
+            self.tooltip_window = None
 
 
 class DrugCalculatorApp:
@@ -122,7 +185,7 @@ class DrugCalculatorApp:
         footer.grid(row=3, column=0, pady=20)
     
     def show_stock_calculator(self):
-        """Display stock solution calculator interface."""
+        """Display stock solution calculator interface with input validation tooltips."""
         self.clear_frame()
         self.current_mode = "stock"
         
@@ -145,22 +208,42 @@ class DrugCalculatorApp:
         input_frame = ttk.LabelFrame(self.main_frame, text="Input Parameters", padding="10")
         input_frame.grid(row=2, column=0, columnspan=3, sticky=(tk.W, tk.E), pady=10)
         
-        # Drug name
+        # ========== ROW 0: Drug name (no tooltip needed) ==========
         ttk.Label(input_frame, text="Drug Name:").grid(row=0, column=0, sticky=tk.W, pady=5)
         self.drug_name_var = tk.StringVar()
         ttk.Entry(input_frame, textvariable=self.drug_name_var, width=30).grid(
             row=0, column=1, columnspan=2, sticky=(tk.W, tk.E), pady=5
         )
         
-        # Molecular weight
-        ttk.Label(input_frame, text="Molecular Weight (g/mol):").grid(row=1, column=0, sticky=tk.W, pady=5)
+        # ========== ROW 1: Molecular weight (WITH tooltip) ==========
+        # Create frame to hold label + info icon together
+        mw_label_frame = ttk.Frame(input_frame)
+        mw_label_frame.grid(row=1, column=0, sticky=tk.W, pady=5)
+        
+        ttk.Label(mw_label_frame, text="Molecular Weight (g/mol):").pack(side=tk.LEFT)
+        
+        # Info icon with tooltip
+        mw_info = ttk.Label(mw_label_frame, text=" ℹ️", foreground="blue", cursor="hand2")
+        mw_info.pack(side=tk.LEFT)
+        ToolTip(mw_info, "Use period (.) for decimal numbers")
+        
+        # Entry field
         self.mw_var = tk.StringVar()
         ttk.Entry(input_frame, textvariable=self.mw_var, width=15).grid(
             row=1, column=1, sticky=tk.W, pady=5
         )
         
-        # Target concentration
-        ttk.Label(input_frame, text="Target Concentration:").grid(row=2, column=0, sticky=tk.W, pady=5)
+        # ========== ROW 2: Target concentration (WITH tooltip) ==========
+        conc_label_frame = ttk.Frame(input_frame)
+        conc_label_frame.grid(row=2, column=0, sticky=tk.W, pady=5)
+        
+        ttk.Label(conc_label_frame, text="Target Concentration:").pack(side=tk.LEFT)
+        
+        conc_info = ttk.Label(conc_label_frame, text=" ℹ️", foreground="blue", cursor="hand2")
+        conc_info.pack(side=tk.LEFT)
+        ToolTip(conc_info, "Use period (.) for decimal numbers")
+        
+        # Entry field
         self.conc_var = tk.StringVar()
         conc_entry = ttk.Entry(input_frame, textvariable=self.conc_var, width=15)
         conc_entry.grid(row=2, column=1, sticky=tk.W, pady=5)
@@ -176,14 +259,23 @@ class DrugCalculatorApp:
         )
         conc_units.grid(row=2, column=2, sticky=tk.W, padx=5, pady=5)
         
-        # Target volume
-        ttk.Label(input_frame, text="Target Volume:").grid(row=3, column=0, sticky=tk.W, pady=5)
+        # ========== ROW 3: Target volume (WITH tooltip) ==========
+        vol_label_frame = ttk.Frame(input_frame)
+        vol_label_frame.grid(row=3, column=0, sticky=tk.W, pady=5)
+        
+        ttk.Label(vol_label_frame, text="Target Volume:").pack(side=tk.LEFT)
+        
+        vol_info = ttk.Label(vol_label_frame, text=" ℹ️", foreground="blue", cursor="hand2")
+        vol_info.pack(side=tk.LEFT)
+        ToolTip(vol_info, "Use period (.) for decimal numbers")
+        
+        # Entry field
         self.vol_var = tk.StringVar()
         vol_entry = ttk.Entry(input_frame, textvariable=self.vol_var, width=15)
         vol_entry.grid(row=3, column=1, sticky=tk.W, pady=5)
         
-        # Volume unit dropdown
-        self.vol_unit_var = tk.StringVar(value="mL")
+        # Volume unit dropdown (default to µL as per your requirement)
+        self.vol_unit_var = tk.StringVar(value="µL")  # Changed default from "mL" to "µL"
         vol_units = ttk.Combobox(
             input_frame,
             textvariable=self.vol_unit_var,
@@ -193,7 +285,7 @@ class DrugCalculatorApp:
         )
         vol_units.grid(row=3, column=2, sticky=tk.W, padx=5, pady=5)
         
-        # Solvent
+        # ========== ROW 4: Solvent (no tooltip needed) ==========
         ttk.Label(input_frame, text="Solvent:").grid(row=4, column=0, sticky=tk.W, pady=5)
         self.solvent_var = tk.StringVar()
         solvent_combo = ttk.Combobox(
@@ -217,6 +309,23 @@ class DrugCalculatorApp:
         ttk.Button(btn_frame, text="Back to Menu", command=self.show_welcome_screen).grid(
             row=0, column=2, padx=5
         )
+        
+        # Results frame
+        self.results_frame = ttk.LabelFrame(self.main_frame, text="Results", padding="10")
+        self.results_frame.grid(row=4, column=0, columnspan=3, sticky=(tk.W, tk.E, tk.N, tk.S), pady=10)
+        
+        self.results_text = scrolledtext.ScrolledText(
+            self.results_frame,
+            height=10,
+            width=60,
+            font=('Courier', 10)
+        )
+        self.results_text.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
+        
+        # Configure grid weights for resizing
+        self.main_frame.rowconfigure(4, weight=1)
+        self.results_frame.columnconfigure(0, weight=1)
+        self.results_frame.rowconfigure(0, weight=1)
     
     def show_dilution_calculator(self):
         """Display working solution dilution calculator interface."""
@@ -292,8 +401,8 @@ class DrugCalculatorApp:
             row=3, column=1, sticky=tk.W, pady=5
         )
         
-        # Volume unit
-        self.vol_unit_var = tk.StringVar(value="mL")
+        # Volume unit (default to µL for consistency)
+        self.vol_unit_var = tk.StringVar(value="µL")
         vol_units = ttk.Combobox(
             input_frame,
             textvariable=self.vol_unit_var,
@@ -329,66 +438,97 @@ class DrugCalculatorApp:
         )
     
     def calculate_stock(self):
-        """Perform stock solution calculation and display results."""
+        """Perform stock solution calculation with input validation and formatted results."""
         try:
-            # Get inputs
+            # ========== STEP 1: Get raw input values ==========
             drug_name = self.drug_name_var.get().strip()
-            mw = float(self.mw_var.get())
-            conc = float(self.conc_var.get())
-            vol = float(self.vol_var.get())
+            mw_input = self.mw_var.get().strip()
+            conc_input = self.conc_var.get().strip()
+            vol_input = self.vol_var.get().strip()
+            
+            # ========== STEP 2: Validate drug name ==========
+            if not drug_name:
+                messagebox.showerror("Input Error", "Please enter a drug name")
+                return
+            
+            # ========== STEP 3: Validate molecular weight ==========
+            is_valid, _, error_msg = validate_decimal_input(mw_input)
+            if not is_valid:
+                messagebox.showerror("Input Error", f"Molecular Weight: {error_msg}")
+                return
+            mw = float(mw_input)
+            
+            if mw <= 0:
+                messagebox.showerror("Input Error", "Molecular weight must be positive")
+                return
+            
+            # ========== STEP 4: Validate concentration ==========
+            is_valid, _, error_msg = validate_decimal_input(conc_input)
+            if not is_valid:
+                messagebox.showerror("Input Error", f"Target Concentration: {error_msg}")
+                return
+            conc = float(conc_input)
+            
+            if conc <= 0:
+                messagebox.showerror("Input Error", "Concentration must be positive")
+                return
+            
+            # ========== STEP 5: Validate volume ==========
+            is_valid, _, error_msg = validate_decimal_input(vol_input)
+            if not is_valid:
+                messagebox.showerror("Input Error", f"Target Volume: {error_msg}")
+                return
+            vol = float(vol_input)
+            
+            if vol <= 0:
+                messagebox.showerror("Input Error", "Volume must be positive")
+                return
+            
+            # ========== STEP 6: Get unit selections ==========
             conc_unit = self.conc_unit_var.get()
             vol_unit = self.vol_unit_var.get()
             solvent = self.solvent_var.get().strip()
             
-            # Validate inputs
-            is_valid, error_msg = validate_inputs(
-                molecular_weight=mw,
-                concentration=conc,
-                volume=vol
-            )
-            
-            if not is_valid:
-                messagebox.showerror("Input Error", error_msg)
-                return
-            
-            if not drug_name:
-                messagebox.showwarning("Missing Input", "Please enter a drug name")
-                return
-            
-            # Calculate
+            # ========== STEP 7: Perform calculation ==========
             result = calculate_stock_from_powder(mw, conc, vol, conc_unit, vol_unit)
             
-            # Create results in popup window
-            self.show_results_window(
-                title="Stock Solution Preparation",
-                drug_name=drug_name,
-                content=f"""Drug: {drug_name}
-Molecular Weight: {mw} g/mol
-Target: {conc} {conc_unit} in {vol} {vol_unit}
+            # ========== STEP 8: Display results with proper formatting ==========
+            formatted_mass_mg = format_result_with_unit(result['mass_mg'], 'mg')
+            formatted_mass_g = format_result_with_unit(result['mass_g'], 'g')
+            formatted_volume = format_result_with_unit(result['volume'], vol_unit)
+            formatted_80pct = format_number(result['volume'] * 0.8)
+            
+            content = f"""Drug: {drug_name}
+Molecular Weight: {format_number(mw)} g/mol
+Target: {format_number(conc)} {conc_unit} in {formatted_volume}
 Solvent: {solvent if solvent else 'Not specified'}
 
 ═══════════════════════════════════════════════════════════
 INSTRUCTIONS:
 ═══════════════════════════════════════════════════════════
 
-1. Weigh {result['mass_mg']:.4f} mg of {drug_name}
-   (or {result['mass_g']:.6f} g)
+1. Weigh {formatted_mass_mg} of {drug_name}
 
 2. Add approximately 80% of final volume of {solvent if solvent else 'solvent'}
-   (~{result['volume'] * 0.8:.2f} {vol_unit})
+   (~{formatted_80pct} {vol_unit})
 
 3. Dissolve completely (vortex/sonicate if needed)
 
-4. Bring to final volume: {result['volume']} {vol_unit}
+4. Bring to final volume: {formatted_volume}
 
 5. Label with:
    - Drug name: {drug_name}
-   - Concentration: {conc} {conc_unit}
+   - Concentration: {format_number(conc)} {conc_unit}
    - Date prepared
    - Your initials"""
+            
+            self.show_results_window(
+                title="Stock Solution Preparation",
+                drug_name=drug_name,
+                content=content
             )
             
-            # Save to history
+            # ========== STEP 9: Save to history ==========
             inputs = {
                 'molecular_weight': mw,
                 'target_concentration': conc,
@@ -405,10 +545,8 @@ INSTRUCTIONS:
                 solvent=solvent
             )
             
-        except ValueError:
-            messagebox.showerror("Input Error", "Please enter valid numerical values")
         except Exception as e:
-            messagebox.showerror("Calculation Error", f"An error occurred: {str(e)}")
+            messagebox.showerror("Calculation Error", f"An unexpected error occurred: {str(e)}")
     
     def calculate_dilution(self):
         """Perform dilution calculation and display results."""
@@ -480,33 +618,39 @@ INSTRUCTIONS:
                 messagebox.showerror("Calculation Error", result.get('message'))
                 return
             
-            # Create results in popup window
-            self.show_results_window(
-                title="Working Solution Preparation",
-                drug_name=drug_name,
-                content=f"""Drug: {drug_name}
-Stock Concentration: {stock_conc} {stock_conc_unit}
-Target: {target_conc} {target_conc_unit} in {target_vol} {vol_unit}
-Dilution Factor: {result['dilution_factor']:.1f}x
+            # Create results in popup window with formatting
+            formatted_stock_vol = format_result_with_unit(result['stock_volume'], vol_unit)
+            formatted_solvent_vol = format_result_with_unit(result['solvent_volume'], vol_unit)
+            formatted_total_vol = format_result_with_unit(result['total_volume'], vol_unit)
+            
+            content = f"""Drug: {drug_name}
+Stock Concentration: {format_number(stock_conc)} {stock_conc_unit}
+Target: {format_number(target_conc)} {target_conc_unit} in {formatted_total_vol}
+Dilution Factor: {format_number(result['dilution_factor'])}x
 Solvent: {solvent if solvent else 'Not specified'}
 
 ═══════════════════════════════════════════════════════════
 INSTRUCTIONS:
 ═══════════════════════════════════════════════════════════
 
-1. Pipette {result['stock_volume']:.4f} {vol_unit} of stock solution
+1. Pipette {formatted_stock_vol} of stock solution
 
-2. Add {result['solvent_volume']:.4f} {vol_unit} of {solvent if solvent else 'solvent'}
+2. Add {formatted_solvent_vol} of {solvent if solvent else 'solvent'}
 
 3. Mix thoroughly (vortex or pipette up/down)
 
-4. Final volume: {result['total_volume']} {vol_unit}
+4. Final volume: {formatted_total_vol}
 
 5. Label with:
    - Drug name: {drug_name}
-   - Concentration: {target_conc} {target_conc_unit}
+   - Concentration: {format_number(target_conc)} {target_conc_unit}
    - Date prepared
    - Your initials"""
+            
+            self.show_results_window(
+                title="Working Solution Preparation",
+                drug_name=drug_name,
+                content=content
             )
             
             # Save to history
