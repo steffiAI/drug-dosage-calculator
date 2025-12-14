@@ -125,6 +125,73 @@ class DrugCalculatorApp:
         """Clear all widgets from main frame."""
         for widget in self.main_frame.winfo_children():
             widget.destroy()
+            
+    def create_labeled_input(self, parent, row, label_text, tooltip_text=None, 
+                            has_unit=False, unit_options=None, default_unit=None):
+        """
+        Create a labeled input field with optional tooltip and unit selector.
+        
+        Parameters
+        ----------
+        parent : tk.Frame
+            Parent frame to place widgets in
+        row : int
+            Grid row number
+        label_text : str
+            Text for the label
+        tooltip_text : str, optional
+            Tooltip text for info icon (if None, no icon is shown)
+        has_unit : bool, default=False
+            Whether to include a unit dropdown
+        unit_options : list, optional
+            List of unit options for dropdown
+        default_unit : str, optional
+            Default selected unit
+            
+        Returns
+        -------
+        dict
+            Dictionary containing 'value_var', 'unit_var' (if applicable)
+        """
+        # Create frame to hold label + optional info icon together
+        label_frame = ttk.Frame(parent)
+        label_frame.grid(row=row, column=0, sticky=tk.W, pady=5)
+        
+        # Add label text
+        ttk.Label(label_frame, text=label_text).pack(side=tk.LEFT)
+        
+        # Add info icon with tooltip if tooltip text is provided
+        if tooltip_text:
+            info_icon = ttk.Label(label_frame, text=" ℹ️", foreground="blue", cursor="hand2")
+            info_icon.pack(side=tk.LEFT)
+            ToolTip(info_icon, tooltip_text)
+        
+        # Create entry field for value input
+        value_var = tk.StringVar()
+        ttk.Entry(parent, textvariable=value_var, width=15).grid(
+            row=row, column=1, sticky=tk.W, pady=5
+        )
+        
+        # Create unit dropdown if requested
+        unit_var = None
+        if has_unit:
+            unit_var = tk.StringVar(value=default_unit or "")
+            unit_combo = ttk.Combobox(
+                parent,
+                textvariable=unit_var,
+                values=unit_options or [],
+                state="readonly",
+                width=8
+            )
+            unit_combo.grid(row=row, column=2, sticky=tk.W, padx=5, pady=5)
+        
+        # Return variables in a dictionary for easy access
+        result = {'value_var': value_var}
+        if unit_var:
+            result['unit_var'] = unit_var
+        
+        return result   
+
     
     def show_welcome_screen(self):
         """Display welcome screen with calculator selection buttons."""
@@ -134,14 +201,14 @@ class DrugCalculatorApp:
         # Title
         title = ttk.Label(
             self.main_frame,
-            text="Drug Dosage Calculator",
+            text="Drug Concentration Calculator",
             font=('Arial', 18, 'bold')
         )
         title.grid(row=0, column=0, pady=20)
         
         subtitle = ttk.Label(
             self.main_frame,
-            text="Laboratory Solution Preparation Tool",
+            text="Solution Preparation Tool",
             font=('Arial', 12)
         )
         subtitle.grid(row=1, column=0, pady=10)
@@ -351,68 +418,53 @@ class DrugCalculatorApp:
         input_frame = ttk.LabelFrame(self.main_frame, text="Input Parameters", padding="10")
         input_frame.grid(row=2, column=0, columnspan=3, sticky=(tk.W, tk.E), pady=10)
         
-        # Drug name
+       # ========== ROW 0: Drug name (no tooltip) ==========
         ttk.Label(input_frame, text="Drug Name:").grid(row=0, column=0, sticky=tk.W, pady=5)
         self.drug_name_var = tk.StringVar()
         ttk.Entry(input_frame, textvariable=self.drug_name_var, width=30).grid(
             row=0, column=1, columnspan=2, sticky=(tk.W, tk.E), pady=5
         )
         
-        # Stock concentration
-        ttk.Label(input_frame, text="Stock Concentration:").grid(row=1, column=0, sticky=tk.W, pady=5)
-        self.stock_conc_var = tk.StringVar()
-        ttk.Entry(input_frame, textvariable=self.stock_conc_var, width=15).grid(
-            row=1, column=1, sticky=tk.W, pady=5
+        # ========== ROW 1: Stock Concentration (with tooltip + unit) ==========
+        stock_conc_fields = self.create_labeled_input(
+            parent=input_frame,
+            row=1,
+            label_text="Stock Concentration:",
+            tooltip_text="Use period (.) for decimal numbers",
+            has_unit=True,
+            unit_options=["M", "mM", "µM", "nM"],
+            default_unit="mM"
         )
+        self.stock_conc_var = stock_conc_fields['value_var']
+        self.stock_conc_unit_var = stock_conc_fields['unit_var']
         
-        # Stock concentration unit
-        self.stock_conc_unit_var = tk.StringVar(value="mM")
-        stock_conc_units = ttk.Combobox(
-            input_frame,
-            textvariable=self.stock_conc_unit_var,
-            values=["M", "mM", "µM", "nM"],
-            state="readonly",
-            width=8
+        # ========== ROW 2: Target Concentration (with tooltip + unit) ==========
+        target_conc_fields = self.create_labeled_input(
+            parent=input_frame,
+            row=2,
+            label_text="Target Concentration:",
+            tooltip_text="Use period (.) for decimal numbers",
+            has_unit=True,
+            unit_options=["M", "mM", "µM", "nM"],
+            default_unit="µM"
         )
-        stock_conc_units.grid(row=1, column=2, sticky=tk.W, padx=5, pady=5)
+        self.target_conc_var = target_conc_fields['value_var']
+        self.target_conc_unit_var = target_conc_fields['unit_var']
         
-        # Target concentration
-        ttk.Label(input_frame, text="Target Concentration:").grid(row=2, column=0, sticky=tk.W, pady=5)
-        self.target_conc_var = tk.StringVar()
-        ttk.Entry(input_frame, textvariable=self.target_conc_var, width=15).grid(
-            row=2, column=1, sticky=tk.W, pady=5
+        # ========== ROW 3: Target Volume (with tooltip + unit) ==========
+        target_vol_fields = self.create_labeled_input(
+            parent=input_frame,
+            row=3,
+            label_text="Target Volume:",
+            tooltip_text="Use period (.) for decimal numbers",
+            has_unit=True,
+            unit_options=["L", "mL", "µL"],
+            default_unit="µL"
         )
+        self.target_vol_var = target_vol_fields['value_var']
+        self.vol_unit_var = target_vol_fields['unit_var']
         
-        # Target concentration unit (same as stock)
-        self.target_conc_unit_var = tk.StringVar(value="µM")
-        target_conc_units = ttk.Combobox(
-            input_frame,
-            textvariable=self.target_conc_unit_var,
-            values=["M", "mM", "µM", "nM"],
-            state="readonly",
-            width=8
-        )
-        target_conc_units.grid(row=2, column=2, sticky=tk.W, padx=5, pady=5)
-        
-        # Target volume
-        ttk.Label(input_frame, text="Target Volume:").grid(row=3, column=0, sticky=tk.W, pady=5)
-        self.target_vol_var = tk.StringVar()
-        ttk.Entry(input_frame, textvariable=self.target_vol_var, width=15).grid(
-            row=3, column=1, sticky=tk.W, pady=5
-        )
-        
-        # Volume unit (default to µL for consistency)
-        self.vol_unit_var = tk.StringVar(value="µL")
-        vol_units = ttk.Combobox(
-            input_frame,
-            textvariable=self.vol_unit_var,
-            values=["L", "mL", "µL"],
-            state="readonly",
-            width=8
-        )
-        vol_units.grid(row=3, column=2, sticky=tk.W, padx=5, pady=5)
-        
-        # Solvent
+        # ========== ROW 4: Solvent (no tooltip) ==========
         ttk.Label(input_frame, text="Solvent:").grid(row=4, column=0, sticky=tk.W, pady=5)
         self.solvent_var = tk.StringVar()
         solvent_combo = ttk.Combobox(
@@ -422,6 +474,8 @@ class DrugCalculatorApp:
             width=27
         )
         solvent_combo.grid(row=4, column=1, columnspan=2, sticky=(tk.W, tk.E), pady=5)
+        
+   
         
         # Button frame
         btn_frame = ttk.Frame(self.main_frame)
