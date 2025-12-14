@@ -160,3 +160,47 @@ def format_result_with_unit(value, unit):
     """
     formatted_number = format_number(value, unit)
     return f"{formatted_number} {unit}"
+
+def convert_to_readable_unit(value, current_unit):
+    """
+    Convert volume to more readable unit if too small.
+    
+    For example: 0.5 µL stays as µL, but 0.0005 mL becomes 0.5 µL
+    
+    Parameters
+    ----------
+    value : float
+        The volume value
+    current_unit : str
+        Current unit ('L', 'mL', 'µL')
+    
+    Returns
+    -------
+    tuple
+        (converted_value, new_unit)
+    
+    Examples
+    --------
+    >>> convert_to_readable_unit(0.0005, 'mL')
+    (0.5, 'µL')
+    >>> convert_to_readable_unit(500, 'µL')
+    (500, 'µL')
+    """
+    # Conversion factors
+    conversions = {
+        'L': {'mL': 1000, 'µL': 1000000},
+        'mL': {'µL': 1000, 'L': 0.001},
+        'µL': {'mL': 0.001, 'L': 0.000001}
+    }
+    
+    # If value is very small, convert to smaller unit
+    if current_unit == 'L' and value < 0.001:  # Less than 1 mL
+        if value < 0.000001:  # Less than 1 µL
+            return (value * 1000000, 'µL')
+        else:
+            return (value * 1000, 'mL')
+    elif current_unit == 'mL' and value < 1:  # Less than 1 mL
+        return (value * 1000, 'µL')
+    
+    # Otherwise return as-is
+    return (value, current_unit)    
