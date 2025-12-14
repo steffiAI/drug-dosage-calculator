@@ -88,10 +88,10 @@ Use this to dilute stock solutions to working concentrations:
 3. Click "Calculate"
 4. Follow the dilution protocol displayed
 
-**Example**: Dilute 10 mM stock to 1 µM working solution
+**Example**: Dilute 10 mM stock to 20 µM working solution
 - Stock: 10 mM
-- Target: 1 µM in 10 mL media
-- Result: Add 1 µL stock to 9.999 mL media (10,000x dilution)
+- Target: 20 µM in 500 µL media
+- Result: Add 1 µL stock to 499 µL media (500x dilution)
 
 ### Viewing History
 
