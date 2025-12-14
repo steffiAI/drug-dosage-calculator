@@ -1,6 +1,6 @@
-# Drug Dosage Calculator - Lab Edition
+# Drug Concentration Calculator - Lab Edition
 
-A Python GUI application for calculating drug solution preparations in laboratory settings. This tool helps researchers quickly calculate the exact amounts needed to prepare stock solutions from powder and dilute stock solutions to working concentrations.
+A Python GUI application for calculation of stock and working dilutions. This tool helps researchers quickly calculate the exact amounts needed to prepare stock solutions from powder and dilute stock solutions to working concentrations.
 
 ## Features
 
@@ -11,10 +11,10 @@ A Python GUI application for calculating drug solution preparations in laborator
 - ✅ **Unit Conversions**: Support for M, mM, µM, nM (concentration) and L, mL, µL (volume)
 - ✅ **Solvent Tracking**: Record which solvent was used for each preparation
 - ✅ **User-Friendly GUI**: Clean tkinter interface with step-by-step instructions
+- ✅ **Enhanced history viewer**: With selection and filtering
 
 ### Coming Soon (Phase 2)
 - Serial dilution calculator
-- Enhanced history viewer with selection and filtering
 - Custom unit preferences
 
 ### Future Plans (Phase 3)
@@ -147,7 +147,7 @@ MIT License - See [LICENSE](LICENSE) file for details
 If you use this tool in your research, please cite:
 
 ```
-Strasser, S. (2025). Drug Dosage Calculator - Lab Edition. 
+Strasser, S. (2025). Drug Concentration Calculator - Lab Edition. 
 GitHub repository: https://github.com/steffiAI/drug-dosage-calculator
 ```
 
