@@ -1,12 +1,1 @@
-# Drug Dosage Calculator - Lab Edition
-# Requirements for Python 3.11+
-
-# No external dependencies required for core functionality
-# All modules used are from Python standard library:
-# - tkinter (GUI)
-# - json (data storage)
-# - pathlib (file handling)
-# - datetime (timestamps)
-
-# Optional: For building executable
-# pyinstaller>=5.0
+pubchempy==1.0.5

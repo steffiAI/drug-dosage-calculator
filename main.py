@@ -15,6 +15,7 @@ sys.path.insert(0, str(Path(__file__).parent / "src"))
 from calculators import calculate_stock_from_powder, calculate_dilution, validate_inputs
 from data_storage import CalculationHistory
 from formatters import format_number, validate_decimal_input, format_result_with_unit, convert_to_readable_unit
+from gui_integration import MolecularWeightLookupWidget, CacheManagerDialog
 
 
 class ToolTip:
@@ -298,6 +299,15 @@ class DrugCalculatorApp:
         self.mw_var = tk.StringVar()
         ttk.Entry(input_frame, textvariable=self.mw_var, width=15).grid(
             row=1, column=1, sticky=tk.W, pady=5
+        )
+
+        # Molecular weigth lookup
+        self.mw_lookup = MolecularWeightLookupWidget(
+            input_frame,
+            self.drug_name_var,  # Drug name entry (already exists)
+            self.mw_var,         # MW entry (already exists)
+            row=1,
+            column_start=2
         )
         
         # ========== ROW 2: Target concentration (WITH tooltip) ==========
