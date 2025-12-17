@@ -1,13 +1,12 @@
 # -*- mode: python ; coding: utf-8 -*-
 """
 PyInstaller spec file for Drug Concentration Calculator
-Optimized to exclude unnecessary scientific computing packages
-and include all local src/ modules
+Optimized build with icon support
 """
 
 block_cipher = None
 
-# Packages to exclude (you don't need these for drug calculator)
+# Packages to exclude
 excludes = [
     'numpy',
     'pandas',
@@ -35,12 +34,11 @@ excludes = [
 
 a = Analysis(
     ['main.py'],
-    pathex=['src'],  # Tell PyInstaller to look in src/ folder
+    pathex=['src'],
     binaries=[],
-    datas=[],
+    datas=[('icon.ico', '.')],  # Bundle icon.ico with .exe for runtime
     hiddenimports=[
         'pubchempy',
-        # Your local modules from src/
         'calculators',
         'data_storage', 
         'formatters',
@@ -73,11 +71,11 @@ exe = EXE(
     upx=True,
     upx_exclude=[],
     runtime_tmpdir=None,
-    console=False,  # No console window (GUI only)
+    console=False,  # No console window
     disable_windowed_traceback=False,
     argv_emulation=False,
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon='icon.ico',  
+    icon='icon.ico',  # .exe file icon in File Explorer
 )

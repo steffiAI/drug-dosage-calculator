@@ -104,12 +104,23 @@ class DrugCalculatorApp:
         self.root.geometry("700x450")
         
         # Set window icon
+
         try:
-            icon_path = Path(__file__).parent / "icon.ico"
+            import sys
+            from pathlib import Path
+            
+            # Get icon path (works for both .py and .exe)
+            if getattr(sys, 'frozen', False):
+                # Running as .exe
+                icon_path = Path(sys._MEIPASS) / "icon.ico"
+            else:
+                # Running as .py
+                icon_path = Path(__file__).parent / "icon.ico"
+            
             if icon_path.exists():
-                self.root.iconbitmap(icon_path)
-        except:
-            pass  # Icon optional, don't crash if missing
+                self.root.iconbitmap(str(icon_path))
+        except Exception as e:
+            pass  # Icon is optional
 
         # Initialize data storage
         self.history = CalculationHistory()
