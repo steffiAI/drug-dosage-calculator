@@ -484,22 +484,7 @@ class DrugCalculatorApp:
             row=0, column=2, padx=5
         )
         
-        # Results frame
-        self.results_frame = ttk.LabelFrame(self.main_frame, text="Results", padding="10")
-        self.results_frame.grid(row=4, column=0, columnspan=3, sticky=(tk.W, tk.E, tk.N, tk.S), pady=10)
         
-        self.results_text = scrolledtext.ScrolledText(
-            self.results_frame,
-            height=10,
-            width=60,
-            font=('Courier', 10)
-        )
-        self.results_text.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
-        
-        # Configure grid weights for resizing
-        self.main_frame.rowconfigure(4, weight=1)
-        self.results_frame.columnconfigure(0, weight=1)
-        self.results_frame.rowconfigure(0, weight=1)
     
     def calculate_stock(self):
         """Perform stock solution calculation with input validation and formatted results."""
@@ -519,7 +504,7 @@ class DrugCalculatorApp:
             is_valid, _, error_msg = validate_decimal_input(mw_input)
             if not is_valid:
                 messagebox.showerror("Input Error", f"Molecular Weight: {error_msg}")
-                return
+                return# Results frame
             mw = float(mw_input)
             
             if mw <= 0:

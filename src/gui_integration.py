@@ -9,7 +9,7 @@ Created: 2025
 """
 
 import tkinter as tk
-from tkinter import ttk, messagebox, simpledialog
+from tkinter import ttk, messagebox
 from typing import Optional, Callable
 import threading
 
@@ -236,31 +236,16 @@ class MolecularWeightLookupWidget:
             # Compound not found
             self.status_label.config(text="❌ Not found", fg="red")
             
-            response = messagebox.askyesno(
+            messagebox.showinfo(
                 "Compound Not Found",
                 f"Could not find '{identifier}' in PubChem.\n\n"
                 "Suggestions:\n"
                 "• Check spelling\n"
-                "• Try CAS number (e.g., 50-18-0)\n"
+                "• Try CAS number (e.g., 15663-27-1)\n"
                 "• Try PubChem CID\n"
                 "• Use alternative drug name\n\n"
-                "Would you like to enter the molecular weight manually?"
+                "Please enter the molecular weight manually in the field above."
             )
-            
-            if response:
-                # Prompt for manual entry
-                mw = simpledialog.askfloat(
-                    "Manual Entry",
-                    f"Enter molecular weight for '{identifier}' (g/mol):",
-                    minvalue=0,
-                    maxvalue=100000
-                )
-                if mw:
-                    self.mw_var.set(f"{mw:.2f}")
-                    self.status_label.config(
-                        text="✏️ Manually entered",
-                        fg="orange"
-                    )
     
     def _handle_lookup_error(self, error_msg: str):
         """
