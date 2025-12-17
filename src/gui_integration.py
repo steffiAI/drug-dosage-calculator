@@ -216,6 +216,11 @@ class MolecularWeightLookupWidget:
             # Auto-fill molecular weight using StringVar
             self.mw_var.set(f"{result['molecular_weight']:.2f}")
             
+            # Replace input with actual drug name (first synonym is usually the common name)
+            if result['synonyms'] and len(result['synonyms']) > 0:
+                drug_name = result['synonyms'][0]  # First synonym is usually the primary name
+                self.drug_name_var.set(drug_name)
+            
             # Show success status
             cache_indicator = "💾" if result.get('cached') else "🌐"
             status_text = (
