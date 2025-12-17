@@ -100,8 +100,8 @@ class DrugCalculatorApp:
             Root tkinter window
         """
         self.root = root
-        self.root.title("Drug Dosage Calculator - Lab Edition")
-        self.root.geometry("700x600")
+        self.root.title("Drug Concentration Calculator - Lab Edition")
+        self.root.geometry("700x450")
         
         # Initialize data storage
         self.history = CalculationHistory()
