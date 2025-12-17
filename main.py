@@ -103,6 +103,14 @@ class DrugCalculatorApp:
         self.root.title("Drug Concentration Calculator - Lab Edition")
         self.root.geometry("700x450")
         
+        # Set window icon
+        try:
+            icon_path = Path(__file__).parent / "icon.ico"
+            if icon_path.exists():
+                self.root.iconbitmap(icon_path)
+        except:
+            pass  # Icon optional, don't crash if missing
+
         # Initialize data storage
         self.history = CalculationHistory()
         
