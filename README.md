@@ -2,6 +2,10 @@
 
 A Python GUI application for calculation of stock and working dilutions. This tool helps researchers quickly calculate the exact amounts needed to prepare stock solutions from powder and dilute stock solutions to working concentrations.
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
+[![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey.svg)]()
+
 ## Features
 
 ### Phase 1 (Current - MVP)
