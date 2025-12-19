@@ -426,8 +426,6 @@ PubChem CID: {result['cid']}
 Common Names / Synonyms:
 {chr(10).join(f"  • {syn}" for syn in result['synonyms'][:10])}
 
-SMILES: {result['connectivity_smiles']}
-
 Data Source: {cache_status}
 Lookup Date: {result.get('lookup_date', 'Unknown')[:10]}
 
@@ -547,7 +545,7 @@ class AboutDialog:
         tk.Label(
             header_frame,
             text="💊 Drug Concentration Calculator",
-            font=("Arial", 16, "bold"),
+            font=("Arial", 15, "bold"),
             bg="#2196F3",
             fg="white"
         ).pack(pady=30)
@@ -559,7 +557,7 @@ class AboutDialog:
         # Version info
         tk.Label(
             info_frame,
-            text="Version 2.1.0",
+            text="Version 2.1.1",
             font=("Arial", 12, "bold"),
             fg="#2196F3"
         ).pack(pady=(0, 5))

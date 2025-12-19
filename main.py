@@ -100,7 +100,7 @@ class DrugCalculatorApp:
             Root tkinter window
         """
         self.root = root
-        self.root.title("Drug Concentration Calculator - Lab Edition")
+        self.root.title("Drug Concentration Calculator")
         self.root.geometry("700x450")
         
         # Set window icon
@@ -129,7 +129,7 @@ class DrugCalculatorApp:
         self.current_mode = None
         
         # Create main container
-        self.main_frame = ttk.Frame(root, padding="10")
+        self.main_frame = tk.Frame(root, padx=10, pady=0)
         self.main_frame.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
         
         # Configure grid weights
@@ -220,7 +220,7 @@ class DrugCalculatorApp:
         
         # Menu bar (Word-style, always visible box)
         menubar = tk.Frame(self.main_frame, relief=tk.FLAT, bd=0)
-        menubar.grid(row=0, column=0, sticky=(tk.W, tk.E), pady=(0, 5))
+        menubar.grid(row=0, column=0, sticky=(tk.W, tk.N, tk.E), pady=(10,0))
         
         about_menu = tk.Label(
             menubar,
@@ -229,16 +229,16 @@ class DrugCalculatorApp:
             cursor="hand2",
             relief=tk.RAISED,
             borderwidth=1,
-            padx=8,
-            pady=3
+            padx=6,
+            pady=1
         )
-        about_menu.pack(side=tk.LEFT)
+        about_menu.pack(side=tk.LEFT, padx=0)
         about_menu.bind("<Button-1>", lambda e: self.show_about_dialog())
         
         # Main title
         subtitle = ttk.Label(
             self.main_frame,
-            text="Solution Preparation Tool",
+            text="Drug Concentration Calculator",
             font=('Arial', 14, 'bold')
         )
         subtitle.grid(row=1, column=0, pady=(15, 10))
@@ -284,7 +284,7 @@ class DrugCalculatorApp:
         # Developer credit
         credit = ttk.Label(
             self.main_frame,
-            text="v2.1.0 • S. Strasser",
+            text="v2.1.1 • S. Strasser",
             font=('Arial', 8),
             foreground='gray'
         )
@@ -428,7 +428,7 @@ class DrugCalculatorApp:
         # Footer
         footer = ttk.Label(
             self.main_frame,
-            text="v2.1.0 • S. Strasser",
+            text="v2.1.1 • S. Strasser",
             font=('Arial', 8),
             foreground='gray'
         )
@@ -534,7 +534,7 @@ class DrugCalculatorApp:
         # Footer
         footer = ttk.Label(
             self.main_frame,
-            text="v2.1.0 • S. Strasser",
+            text="v2.1.1 • S. Strasser",
             font=('Arial', 8),
             foreground='gray'
         )
@@ -979,7 +979,7 @@ ADD:   {format_number(solvent_vol_converted)} {solvent_vol_unit} of {solvent if 
         # Footer
         footer = ttk.Label(
             self.main_frame,
-            text="v2.1.0 • S. Strasser",
+            text="v2.1.1 • S. Strasser",
             font=('Arial', 8),
             foreground='gray'
         )
