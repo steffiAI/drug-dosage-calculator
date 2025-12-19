@@ -15,7 +15,7 @@ sys.path.insert(0, str(Path(__file__).parent / "src"))
 from calculators import calculate_stock_from_powder, calculate_dilution, validate_inputs
 from data_storage import CalculationHistory
 from formatters import format_number, validate_decimal_input, format_result_with_unit, convert_to_readable_unit
-from gui_integration import MolecularWeightLookupWidget, CacheManagerDialog
+from gui_integration import MolecularWeightLookupWidget, AboutDialog
 
 
 class ToolTip:
@@ -218,20 +218,30 @@ class DrugCalculatorApp:
         self.clear_frame()
         self.current_mode = None
         
-        # Title
-        title = ttk.Label(
-            self.main_frame,
-            text="Drug Concentration Calculator",
-            font=('Arial', 18, 'bold')
-        )
-        title.grid(row=0, column=0, pady=20)
+        # Menu bar (Word-style, always visible box)
+        menubar = tk.Frame(self.main_frame, relief=tk.FLAT, bd=0)
+        menubar.grid(row=0, column=0, sticky=(tk.W, tk.E), pady=(0, 5))
         
+        about_menu = tk.Label(
+            menubar,
+            text="About",
+            font=('Arial', 9),
+            cursor="hand2",
+            relief=tk.RAISED,
+            borderwidth=1,
+            padx=8,
+            pady=3
+        )
+        about_menu.pack(side=tk.LEFT)
+        about_menu.bind("<Button-1>", lambda e: self.show_about_dialog())
+        
+        # Main title
         subtitle = ttk.Label(
             self.main_frame,
             text="Solution Preparation Tool",
-            font=('Arial', 12)
+            font=('Arial', 14, 'bold')
         )
-        subtitle.grid(row=1, column=0, pady=10)
+        subtitle.grid(row=1, column=0, pady=(15, 10))
         
         # Button frame
         button_frame = ttk.Frame(self.main_frame)
@@ -264,12 +274,21 @@ class DrugCalculatorApp:
         
         # Footer
         count = self.history.get_calculation_count()
-        footer = ttk.Label(
+        calc_count = ttk.Label(
             self.main_frame,
             text=f"Total calculations saved: {count}",
             font=('Arial', 9)
         )
-        footer.grid(row=3, column=0, pady=20)
+        calc_count.grid(row=3, column=0, pady=(20, 5))
+        
+        # Developer credit
+        credit = ttk.Label(
+            self.main_frame,
+            text="v2.1.0 • S. Strasser",
+            font=('Arial', 8),
+            foreground='gray'
+        )
+        credit.grid(row=4, column=0, pady=(0, 10))
     
     def show_stock_calculator(self):
         """Display stock solution calculator interface with input validation tooltips."""
@@ -405,6 +424,15 @@ class DrugCalculatorApp:
         ttk.Button(btn_frame, text="Back to Menu", command=self.show_welcome_screen).grid(
             row=0, column=2, padx=5
         )
+        
+        # Footer
+        footer = ttk.Label(
+            self.main_frame,
+            text="v2.1.0 • S. Strasser",
+            font=('Arial', 8),
+            foreground='gray'
+        )
+        footer.grid(row=4, column=0, columnspan=3, pady=(20, 5))
     
     def show_dilution_calculator(self):
         """Display working solution dilution calculator interface."""
@@ -502,6 +530,15 @@ class DrugCalculatorApp:
         ttk.Button(btn_frame, text="Back to Menu", command=self.show_welcome_screen).grid(
             row=0, column=2, padx=5
         )
+        
+        # Footer
+        footer = ttk.Label(
+            self.main_frame,
+            text="v2.1.0 • S. Strasser",
+            font=('Arial', 8),
+            foreground='gray'
+        )
+        footer.grid(row=4, column=0, columnspan=3, pady=(20, 5))
         
         
     
@@ -737,6 +774,10 @@ ADD:   {format_number(solvent_vol_converted)} {solvent_vol_unit} of {solvent if 
             self.target_vol_var.set("")
             self.solvent_var.set("")
     
+    def show_about_dialog(self):
+        """Show the About dialog with application information."""
+        AboutDialog(self.root)
+    
     def show_results_window(self, title: str, drug_name: str, content: str):
         """
         Display calculation results in a popup window.
@@ -934,6 +975,15 @@ ADD:   {format_number(solvent_vol_converted)} {solvent_vol_unit} of {solvent if 
         # Configure grid weights
         self.main_frame.rowconfigure(2, weight=1)
         self.main_frame.columnconfigure(0, weight=1)
+        
+        # Footer
+        footer = ttk.Label(
+            self.main_frame,
+            text="v2.1.0 • S. Strasser",
+            font=('Arial', 8),
+            foreground='gray'
+        )
+        footer.grid(row=4, column=0, columnspan=2, pady=(10, 5))
         
         # Initial display
         self.update_history_display()
