@@ -64,7 +64,7 @@ exe = EXE(
     a.zipfiles,
     a.datas,
     [],
-    name='DrugCalculator',
+    name='DrugCalculator-v2.1.1',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,

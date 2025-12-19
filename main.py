@@ -796,6 +796,21 @@ ADD:   {format_number(solvent_vol_converted)} {solvent_vol_unit} of {solvent if 
         results_window.title(f"{title} - {drug_name}")
         results_window.geometry("650x400")
         
+        # add icon
+        try:
+            import sys
+            from pathlib import Path
+            
+            if getattr(sys, 'frozen', False):
+                icon_path = Path(sys._MEIPASS) / "icon.ico"
+            else:
+                icon_path = Path(__file__).parent / "icon.ico"
+            
+            if icon_path.exists():
+                results_window.iconbitmap(str(icon_path))
+        except Exception:
+            pass
+
         # Make it modal (stay on top)
         results_window.transient(self.root)
         results_window.grab_set()
@@ -1065,6 +1080,8 @@ ADD:   {format_number(solvent_vol_converted)} {solvent_vol_unit} of {solvent if 
     
     def show_calculation_details(self, event):
         """Show detailed view of selected calculation in popup window."""
+        
+        
         # Get selected item
         selection = self.history_tree.selection()
         if not selection:
@@ -1094,6 +1111,21 @@ ADD:   {format_number(solvent_vol_converted)} {solvent_vol_unit} of {solvent if 
         details_window = tk.Toplevel(self.root)
         details_window.title(f"{calc['calculation_type']} - {calc['drug_name']}")
         details_window.geometry("700x450")
+        
+        # Add icon
+        try:
+            import sys
+            from pathlib import Path
+            
+            if getattr(sys, 'frozen', False):
+                icon_path = Path(sys._MEIPASS) / "icon.ico"
+            else:
+                icon_path = Path(__file__).parent / "icon.ico"
+            
+            if icon_path.exists():
+                details_window.iconbitmap(str(icon_path))
+        except Exception:
+            pass
         
         # Make it modal but don't grab yet (causes issues)
         details_window.transient(self.root)

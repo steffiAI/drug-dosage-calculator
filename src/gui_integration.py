@@ -385,6 +385,22 @@ class MolecularWeightLookupWidget:
         info_window.geometry("550x500")
         info_window.resizable(False, False)
         
+        # Add icon 
+        try:
+            import sys
+            from pathlib import Path
+            
+            if getattr(sys, 'frozen', False):
+                icon_path = Path(sys._MEIPASS) / "icon.ico"
+            else:
+                icon_path = Path(__file__).parent.parent / "icon.ico"
+            
+            if icon_path.exists():
+                info_window.iconbitmap(str(icon_path))
+        except Exception:
+            pass
+
+
         # Main container frame
         main_frame = tk.Frame(info_window)
         main_frame.pack(fill=tk.BOTH, expand=True)
@@ -441,26 +457,18 @@ You can copy the PubChem link above to view full details in your browser.
         text.insert(1.0, info_text)
         text.config(state=tk.DISABLED)  # Make read-only
         
-        # Footer with developer credit
-        footer_frame = tk.Frame(main_frame, bg="#f5f5f5", height=70)
+       # Footer with developer credit
+        footer_frame = tk.Frame(main_frame, bg="#f5f5f5", height=50)
         footer_frame.pack(fill=tk.X, side=tk.BOTTOM)
         footer_frame.pack_propagate(False)
-        
+
         tk.Label(
             footer_frame,
-            text="Drug Concentration Calculator v2.1.0",
-            font=("Arial", 9),
-            bg="#f5f5f5",
-            fg="#555"
-        ).pack(pady=(12, 2))
-        
-        tk.Label(
-            footer_frame,
-            text="Developed by Stefanie Strasser",
+            text="v2.1.1 • S. Strasser",
             font=("Arial", 8),
             bg="#f5f5f5",
             fg="gray"
-        ).pack()
+        ).pack(pady=15)
         
         # Close button
         btn_frame = tk.Frame(main_frame, pady=10)
