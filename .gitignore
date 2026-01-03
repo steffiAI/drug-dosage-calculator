@@ -26,3 +26,9 @@ dist/
 # OS
 .DS_Store
 Thumbs.db
+
+# Backup files
+main_*.py
+src/*_BACKUP.py
+src/*_final.py
+src/*_v*.py
