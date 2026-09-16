@@ -4,56 +4,50 @@ A Python GUI application for calculation of stock and working dilutions. This to
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
-[![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey.svg)]()
+[![Platform](https://img.shields.io/badge/platform-Windows-lightgrey.svg)]()
 
 ## Features
 
-### Phase 1 (Current - MVP)
 - ✅ **Stock Solution Calculator**: Calculate mass of powder needed to prepare stock solutions
 - ✅ **Working Solution Calculator**: Dilute stock solutions to working concentrations
-- ✅ **Calculation History**: Automatically saves all calculations with timestamps
+- ✅ **PubChem integration**: Automatic molecular weight lookup by drug name or CAS number
+- ✅ **Calculation History**: Automatically saves all calculations with timestamps, with search, filtering, and sortable columns
 - ✅ **Unit Conversions**: Support for M, mM, µM, nM (concentration) and L, mL, µL (volume)
 - ✅ **Solvent Tracking**: Record which solvent was used for each preparation
-- ✅ **User-Friendly GUI**: Clean tkinter interface with step-by-step instructions
-- ✅ **Enhanced history viewer**: With selection and filtering
+- ✅ **Modern dark-themed GUI**: Built with CustomTkinter
 
-### Coming Soon (Phase 2)
+### Coming Soon
 - Serial dilution calculator
 - Custom unit preferences
-
-### Future Plans (Phase 3)
 - PDF export with formatted protocols
-- PubChem API integration for automatic molecular weight lookup
-- Drug identifier support (CAS numbers, catalog numbers, RRID)
+- Exporting selected history entries together
 
 ## Requirements
 
 - **Python**: 3.11+
-- **OS**: Windows 11 (tested), likely compatible with macOS/Linux but not yet verified
-- **Dependencies**: Only Python standard library (tkinter)
+- **OS**: Windows 11 (tested); the packaged `.exe` is Windows-only
+- **Dependencies**: customtkinter, Pillow, pubchempy (see `pyproject.toml`)
 
 ## Installation
 
 ### Option 1: Using the Executable (Windows Only)
 1. Download the latest `.exe` file from the [Releases](https://github.com/steffiAI/drug-dosage-calculator/releases) page
 2. Double-click to run - no installation needed!
-3. **Note:** macOS/Linux users should use Option 2 (run from source)
 
 ### Option 2: Running from Source
+
+This project uses [uv](https://docs.astral.sh/uv/) for dependency management.
 
 ```bash
 # Clone the repository
 git clone https://github.com/steffiAI/drug-dosage-calculator.git
 cd drug-dosage-calculator
 
-# Create virtual environment (recommended)
-python -m venv venv
-source venv/Scripts/activate  # On Windows (Git Bash)
-# or
-source venv/bin/activate       # On macOS/Linux
+# Install dependencies into a managed virtual environment
+uv sync
 
 # Run the application
-python main.py
+uv run python main_ctk.py
 ```
 
 ## Usage
@@ -65,7 +59,7 @@ Use this when you need to prepare a stock solution from powder:
 1. Click "Stock Solution Calculator"
 2. Enter:
    - Drug name
-   - Molecular weight (g/mol)
+   - Molecular weight (g/mol) - or click "Lookup MW" to fetch it from PubChem
    - Desired concentration (with unit)
    - Desired volume (with unit)
    - Solvent type
@@ -100,34 +94,37 @@ Use this to dilute stock solutions to working concentrations:
 ### Viewing History
 
 - Click "View Calculation History" from the main menu
-- See all past calculations with timestamps
-- Useful for record-keeping and reproducing preparations
+- Search by drug name or solvent, filter by calculation type, and click any column header to sort by it
+- Double-click an entry (or select it and click "View Details") to see the full protocol again
 
 ## Project Structure
 
 ```
 drug-dosage-calculator/
-├── main.py                 # Main GUI application
+├── main_ctk.py                    # Main GUI application (CustomTkinter)
+├── assets/                        # Icons, app icon, hero image
 ├── src/
-│   ├── calculators.py     # Core calculation functions
-│   └── data_storage.py    # History management
+│   ├── calculators.py             # Core calculation functions
+│   ├── data_storage.py            # History management
+│   ├── formatters.py              # Number/unit formatting
+│   ├── gui_integration_ctk.py     # PubChem lookup widget, About dialog
+│   └── pubchem_api.py             # PubChem API wrapper
 ├── data/
-│   └── calculation_history.json  # Saved calculations (auto-generated)
+│   └── calculation_history.json   # Saved calculations (auto-generated)
+├── DrugCalculator-ctk-windows.spec # PyInstaller build config
 ├── README.md
 ├── LICENSE
-└── requirements.txt
+└── pyproject.toml
 ```
 
-## Building Executable
-
-To create a standalone `.exe` file:
+## Building the Executable
 
 ```bash
-# Install PyInstaller
-pip install pyinstaller
+# Add PyInstaller to the project (one-time)
+uv add --dev pyinstaller
 
-# Create executable
-pyinstaller --onefile --windowed --name "DrugCalculator" main.py
+# Build using the spec file
+uv run python -m PyInstaller DrugCalculator-ctk-windows.spec
 
 # Find the executable in dist/
 ```
