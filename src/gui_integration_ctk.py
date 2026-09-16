@@ -1,12 +1,9 @@
 """
 GUI Integration Module for PubChem API Lookup (CustomTkinter migration).
 
-MIGRATION STATUS (increment 1 of 4):
+MIGRATION STATUS (increment 2 of 4):
     [x] AboutDialog
-    [ ] MolecularWeightLookupWidget -> still tkinter/ttk, migrated in increment 2
-
-Until increment 2, keep the original ``gui_integration.py`` alongside this
-file - ``main_ctk.py`` only imports ``AboutDialog`` from here so far.
+    [x] MolecularWeightLookupWidget
 
 Author: Stefanie Strasser
 GitHub: https://github.com/steffiAI/drug-dosage-calculator
@@ -14,17 +11,27 @@ License: MIT
 """
 
 import sys
+import threading
 from pathlib import Path
+from tkinter import messagebox, simpledialog
+from typing import Optional
 
 import customtkinter as ctk
 
+from pubchem_api import PubChemAPI
+
 # Color tokens, matching main_ctk.py's palette.
 BG = "#1E1E1E"
+ROW = "#2F2F2F"
+ROW_HOVER = "#3A3A3A"
 CARD = "#262626"
 BORDER = "#2A2A2A"
 ACCENT = "#5CB8EC"
 TEXT = "#FFFFFF"
 MUTED = "#9AA0A6"
+SUCCESS = "#6FCF6F"
+ERROR = "#FF6B6B"
+WARNING = "#F2C94C"
 
 
 class AboutDialog:
@@ -171,3 +178,224 @@ class AboutDialog:
             Frame to place the divider in.
         """
         ctk.CTkFrame(parent, height=1, fg_color=BORDER).pack(fill="x", pady=15)
+
+
+class MolecularWeightLookupWidget:
+    """
+    Lookup button + status label for PubChem molecular weight lookup.
+
+    Parameters
+    ----------
+    parent_frame : customtkinter.CTkFrame
+        Frame to place the widget in.
+    drug_name_var : tkinter.StringVar
+        Variable holding the drug name or CAS number to search.
+    mw_var : tkinter.StringVar
+        Variable to fill with the looked-up molecular weight.
+    row : int, default=0
+        Grid row for placement.
+    column_start : int, default=3
+        Starting grid column.
+    """
+
+    def __init__(
+        self,
+        parent_frame: ctk.CTkFrame,
+        drug_name_var,
+        mw_var,
+        row: int = 0,
+        column_start: int = 3,
+    ) -> None:
+        self.frame = parent_frame
+        self.drug_name_var = drug_name_var
+        self.mw_var = mw_var
+        self.api = PubChemAPI()
+        self.current_result: Optional[dict] = None
+
+        self.lookup_button = ctk.CTkButton(
+            parent_frame,
+            text="Lookup MW",
+            command=self._on_lookup_clicked,
+            fg_color=ROW,
+            hover_color=ROW_HOVER,
+            text_color=ACCENT,
+            font=ctk.CTkFont(family="Segoe UI", size=12, weight="bold"),
+            width=120,
+            height=28,
+        )
+        self.lookup_button.grid(row=row, column=column_start, padx=(8, 16), pady=2, sticky="e")
+
+        self.status_label = ctk.CTkLabel(
+            parent_frame, text="", font=ctk.CTkFont(family="Segoe UI", size=11), text_color=MUTED
+        )
+        self.status_label.grid(
+            row=row, column=column_start + 1, columnspan=2, padx=5, sticky="w"
+        )
+
+    def _get_display_name(self, result: dict) -> str:
+        """
+        Get the preferred compound name from a PubChem result, Title Case.
+
+        Parameters
+        ----------
+        result : dict
+            PubChem lookup result.
+
+        Returns
+        -------
+        str
+        """
+        if result.get("synonyms"):
+            return result["synonyms"][0].title()
+        return result.get("molecular_formula", "Unknown")
+
+    def _on_lookup_clicked(self) -> None:
+        """Handle the Lookup button click; runs the API call on a background thread."""
+        user_input = self.drug_name_var.get().strip()
+        if not user_input:
+            messagebox.showwarning("Input Required", "Please enter a drug name or CAS number first.")
+            return
+
+        self.lookup_button.configure(text="Searching...", state="disabled")
+        self.status_label.configure(text="Searching PubChem...", text_color=ACCENT)
+        self.frame.update()
+
+        threading.Thread(target=self._perform_lookup, args=(user_input,), daemon=True).start()
+
+    def _perform_lookup(self, identifier: str) -> None:
+        """
+        Run the PubChem lookup off the main thread, then hand off to the GUI thread.
+
+        Parameters
+        ----------
+        identifier : str
+            Drug name or CAS number to search.
+        """
+        try:
+            result, _ = self.api.robust_lookup(identifier)
+            self.frame.after(0, self._handle_lookup_result, result, identifier)
+        except Exception as e:
+            self.frame.after(0, self._handle_lookup_error, str(e))
+
+    def _handle_lookup_result(self, result: Optional[dict], identifier: str) -> None:
+        """
+        Apply a lookup result on the main thread.
+
+        Parameters
+        ----------
+        result : dict or None
+            Lookup result, or None if not found.
+        identifier : str
+            Original search identifier.
+        """
+        self.lookup_button.configure(text="Lookup MW", state="normal")
+
+        if result:
+            self.current_result = result
+            display_name = self._get_display_name(result)
+            self.mw_var.set(f"{result['molecular_weight']:.2f}")
+
+            cache_indicator = "cached" if result.get("cached") else "PubChem"
+            self.status_label.configure(
+                text=f"{display_name} \u00b7 {result['molecular_formula']} ({cache_indicator})",
+                text_color=SUCCESS,
+            )
+            self._show_compound_info(result, display_name)
+        else:
+            self.status_label.configure(text="Not found", text_color=ERROR)
+            if messagebox.askyesno(
+                "Compound Not Found",
+                f"Could not find '{identifier}' in PubChem.\n\n"
+                "Suggestions:\n\u2022 Check spelling\n\u2022 Try a CAS number\n"
+                "\u2022 Use an alternative name\n\nEnter the molecular weight manually?",
+            ):
+                mw = simpledialog.askfloat(
+                    "Manual Entry",
+                    f"Enter molecular weight for '{identifier}' (g/mol):",
+                    minvalue=0,
+                    maxvalue=100000,
+                )
+                if mw:
+                    self.mw_var.set(f"{mw:.2f}")
+                    self.status_label.configure(text="Manually entered", text_color=WARNING)
+
+    def _handle_lookup_error(self, error_msg: str) -> None:
+        """
+        Handle a lookup error on the main thread.
+
+        Parameters
+        ----------
+        error_msg : str
+            Error message to display.
+        """
+        self.lookup_button.configure(text="Lookup MW", state="normal")
+        self.status_label.configure(text="Error", text_color=ERROR)
+        messagebox.showerror(
+            "Lookup Error",
+            f"An error occurred during lookup:\n\n{error_msg}\n\n"
+            "Please check your internet connection and try again.",
+        )
+
+    def _show_compound_info(self, result: dict, display_name: str) -> None:
+        """
+        Show a popup with full compound details.
+
+        Parameters
+        ----------
+        result : dict
+            PubChem lookup result.
+        display_name : str
+            Normalized compound name for the popup title.
+        """
+        win = ctk.CTkToplevel(self.frame)
+        win.title(f"Compound Information - {display_name}")
+        win.geometry("550x500")
+        win.resizable(False, False)
+        win.configure(fg_color=BG)
+
+        try:
+            icon_path = (
+                Path(sys._MEIPASS) / "assets" / "icon.ico"
+                if getattr(sys, "frozen", False)
+                else Path(__file__).parent / "assets" / "icon.ico"
+            )
+            if icon_path.exists():
+                win.iconbitmap(str(icon_path))
+        except Exception:
+            pass
+
+        header = ctk.CTkFrame(win, fg_color=CARD, corner_radius=0, height=56)
+        header.pack(fill="x")
+        header.pack_propagate(False)
+        ctk.CTkLabel(
+            header,
+            text=display_name,
+            font=ctk.CTkFont(family="Segoe UI", size=16, weight="bold"),
+            text_color=TEXT,
+        ).pack(pady=16)
+
+        cache_status = "Cached data" if result.get("cached") else "Fresh from PubChem"
+        pubchem_url = f"https://pubchem.ncbi.nlm.nih.gov/compound/{result['cid']}"
+        synonyms = "\n".join(f"  \u2022 {syn}" for syn in result["synonyms"][:10])
+        info_text = (
+            f"Compound Name: {display_name}\n"
+            f"Molecular Formula: {result['molecular_formula']}\n"
+            f"Molecular Weight: {result['molecular_weight']:.2f} g/mol\n"
+            f"IUPAC Name: {result['iupac_name']}\n"
+            f"PubChem CID: {result['cid']}\n\n"
+            f"Common Names / Synonyms:\n{synonyms}\n\n"
+            f"Data Source: {cache_status}\n"
+            f"Lookup Date: {result.get('lookup_date', 'Unknown')[:10]}\n\n"
+            f"PubChem Link:\n{pubchem_url}\n"
+        )
+
+        text = ctk.CTkTextbox(
+            win, fg_color=BG, text_color=TEXT, font=ctk.CTkFont(family="Segoe UI", size=12), wrap="word"
+        )
+        text.pack(fill="both", expand=True, padx=15, pady=15)
+        text.insert("1.0", info_text)
+        text.configure(state="disabled")
+
+        ctk.CTkButton(
+            win, text="Close", command=win.destroy, fg_color=ROW, hover_color=ROW_HOVER, text_color=TEXT
+        ).pack(pady=(0, 15))
