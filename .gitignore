@@ -32,3 +32,4 @@ main_*.py
 src/*_BACKUP.py
 src/*_final.py
 src/*_v*.py
+!main_ctk.py
