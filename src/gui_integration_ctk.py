@@ -11,6 +11,7 @@ License: MIT
 """
 
 import sys
+import ctypes
 import threading
 from pathlib import Path
 from tkinter import messagebox, simpledialog
@@ -34,6 +35,29 @@ ERROR = "#FF6B6B"
 WARNING = "#F2C94C"
 
 
+def apply_dark_titlebar(window) -> None:
+    """
+    Force an immersive dark Windows title bar on a Tk/CTk window.
+
+    Parameters
+    ----------
+    window : tkinter.Toplevel or customtkinter equivalent
+        Window to apply the dark title bar to.
+
+    Notes
+    -----
+    Windows only; no-ops on other platforms or unsupported Windows builds.
+    """
+    try:
+        window.update_idletasks()
+        hwnd = ctypes.windll.user32.GetParent(window.winfo_id())
+        ctypes.windll.dwmapi.DwmSetWindowAttribute(
+            hwnd, 20, ctypes.byref(ctypes.c_int(1)), ctypes.sizeof(ctypes.c_int)
+        )
+    except Exception:
+        pass
+
+
 class AboutDialog:
     """
     About dialog window shown from the "About" button.
@@ -55,13 +79,14 @@ class AboutDialog:
             if getattr(sys, "frozen", False):
                 icon_path = Path(sys._MEIPASS) / "assets" / "icon.ico"
             else:
-                icon_path = Path(__file__).parent / "assets" / "icon.ico"
+                icon_path = Path(__file__).parent.parent / "assets" / "icon.ico"
             if icon_path.exists():
                 self.dialog.iconbitmap(str(icon_path))
         except Exception:
             pass
 
         self.dialog.transient(parent)
+        apply_dark_titlebar(self.dialog)
         self.dialog.focus_set()
 
         info_frame = ctk.CTkFrame(self.dialog, fg_color="transparent")
@@ -161,10 +186,10 @@ class AboutDialog:
             border_color=BORDER,
         ).pack(pady=20)
 
-        # Center on screen
+        # Center on the main app window, not the screen
         self.dialog.update_idletasks()
-        x = (self.dialog.winfo_screenwidth() // 2) - (480 // 2)
-        y = (self.dialog.winfo_screenheight() // 2) - (560 // 2)
+        x = parent.winfo_rootx() + (parent.winfo_width() // 2) - 240
+        y = parent.winfo_rooty() + (parent.winfo_height() // 2) - 280
         self.dialog.geometry(f"+{x}+{y}")
 
     @staticmethod
@@ -226,7 +251,8 @@ class MolecularWeightLookupWidget:
         self.lookup_button.grid(row=row, column=column_start, padx=(8, 16), pady=2, sticky="e")
 
         self.status_label = ctk.CTkLabel(
-            parent_frame, text="", font=ctk.CTkFont(family="Segoe UI", size=11), text_color=MUTED
+            parent_frame, text="", font=ctk.CTkFont(family="Segoe UI", size=11), text_color=MUTED,
+            justify="left", anchor="w",
         )
         self.status_label.grid(
             row=row, column=column_start + 1, columnspan=2, padx=5, sticky="w"
@@ -295,11 +321,9 @@ class MolecularWeightLookupWidget:
             display_name = self._get_display_name(result)
             self.mw_var.set(f"{result['molecular_weight']:.2f}")
 
-            cache_indicator = "cached" if result.get("cached") else "PubChem"
-            self.status_label.configure(
-                text=f"{display_name} \u00b7 {result['molecular_formula']} ({cache_indicator})",
-                text_color=SUCCESS,
-            )
+            # The compound info popup (below) already shows name/formula,
+            # so nothing needs repeating here - avoids widening the card.
+            self.status_label.configure(text="", text_color=SUCCESS)
             self._show_compound_info(result, display_name)
         else:
             self.status_label.configure(text="Not found", text_color=ERROR)
@@ -352,17 +376,19 @@ class MolecularWeightLookupWidget:
         win.geometry("550x500")
         win.resizable(False, False)
         win.configure(fg_color=BG)
+        win.transient(self.frame.winfo_toplevel())
 
         try:
             icon_path = (
                 Path(sys._MEIPASS) / "assets" / "icon.ico"
                 if getattr(sys, "frozen", False)
-                else Path(__file__).parent / "assets" / "icon.ico"
+                else Path(__file__).parent.parent / "assets" / "icon.ico"
             )
             if icon_path.exists():
                 win.iconbitmap(str(icon_path))
         except Exception:
             pass
+        apply_dark_titlebar(win)
 
         header = ctk.CTkFrame(win, fg_color=CARD, corner_radius=0, height=56)
         header.pack(fill="x")
@@ -399,3 +425,9 @@ class MolecularWeightLookupWidget:
         ctk.CTkButton(
             win, text="Close", command=win.destroy, fg_color=ROW, hover_color=ROW_HOVER, text_color=TEXT
         ).pack(pady=(0, 15))
+
+        win.update_idletasks()
+        parent_win = self.frame.winfo_toplevel()
+        x = parent_win.winfo_rootx() + (parent_win.winfo_width() // 2) - (win.winfo_width() // 2)
+        y = parent_win.winfo_rooty() + (parent_win.winfo_height() // 2) - (win.winfo_height() // 2)
+        win.geometry(f"+{x}+{y}")

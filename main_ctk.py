@@ -1,24 +1,15 @@
 """
 Drug Dosage Calculator - Main GUI Application (CustomTkinter migration).
 
-Version: v2.2.0.
+Version: v3.0.0.
 
-MIGRATION STATUS (increment 1 of 4):
-    [x] App shell, dark appearance, title bar
-    [x] Welcome screen
-    [x] About dialog (see gui_integration_ctk.py)
-    [ ] Stock Solution Calculator screen  -> placeholder
-    [ ] Working Solution Calculator screen -> placeholder
-    [ ] History screen (keeps ttk.Treeview embedded)
-
-Run this file directly to test in isolation.
 """
 
 import sys
 import ctypes
 import tkinter as tk
 from pathlib import Path
-from tkinter import messagebox, StringVar
+from tkinter import messagebox, ttk, StringVar
 from typing import Optional
 
 import customtkinter as ctk
@@ -49,8 +40,13 @@ MUTED = "#9AA0A6"
 INSET_TEXT = "#B9BEC3"
 FOOTER_COLOR = "#7D8287"
 
-APP_VERSION = "v2.2.0"
+APP_VERSION = "v3.0.0"
 COLUMN_WIDTH = 640
+
+HISTORY_COLUMN_LABELS = {
+    "#": "#", "Date": "Date", "Drug": "Drug Name", "Type": "Type",
+    "Value": "Concentration & Volume", "Solvent": "Solvent",
+}
 
 
 def _asset_path(*parts: str) -> Path:
@@ -99,7 +95,7 @@ class CTkToolTip:
         self.tip.wm_overrideredirect(True)
         self.tip.wm_geometry(f"+{x}+{y}")
         tk.Label(
-            self.tip, text=self.text, bg=CARD, fg=TEXT, font=("Segoe UI", 18),
+            self.tip, text=self.text, bg=CARD, fg=TEXT, font=("Segoe UI", 14),
             relief="solid", borderwidth=1, highlightbackground=BORDER, padx=6, pady=3,
         ).pack()
 
@@ -108,6 +104,29 @@ class CTkToolTip:
         if self.tip:
             self.tip.destroy()
             self.tip = None
+
+
+def apply_dark_titlebar(window) -> None:
+    """
+    Force an immersive dark Windows title bar on a Tk/CTk window.
+
+    Parameters
+    ----------
+    window : tkinter.Tk, tkinter.Toplevel, or customtkinter equivalent
+        Window to apply the dark title bar to.
+
+    Notes
+    -----
+    Windows only; no-ops on other platforms or unsupported Windows builds.
+    """
+    try:
+        window.update_idletasks()
+        hwnd = ctypes.windll.user32.GetParent(window.winfo_id())
+        ctypes.windll.dwmapi.DwmSetWindowAttribute(
+            hwnd, 20, ctypes.byref(ctypes.c_int(1)), ctypes.sizeof(ctypes.c_int)
+        )
+    except Exception:
+        pass
 
 
 class DrugCalculatorApp:
@@ -138,16 +157,8 @@ class DrugCalculatorApp:
             pass
 
         # Immersive dark title bar (Windows only; no-ops elsewhere).
-        try:
-            self.root.update_idletasks()
-            hwnd = ctypes.windll.user32.GetParent(self.root.winfo_id())
-            ctypes.windll.dwmapi.DwmSetWindowAttribute(
-                hwnd, 20, ctypes.byref(ctypes.c_int(1)), ctypes.sizeof(ctypes.c_int)
-            )
-        except Exception:
-            pass
+        apply_dark_titlebar(self.root)
 
-        self._calculation_count: int = 0
         self.current_mode: Optional[str] = None
         self.history = CalculationHistory()
 
@@ -159,7 +170,6 @@ class DrugCalculatorApp:
         self.history_title_font = ctk.CTkFont(family="Segoe UI", size=16, weight="bold")
         self.inset_font = ctk.CTkFont(family="Segoe UI", size=13)
         self.footer_font = ctk.CTkFont(family="Consolas", size=13)
-        self.placeholder_font = ctk.CTkFont(family="Segoe UI", size=16)
         self.button_font = ctk.CTkFont(family="Segoe UI", size=15, weight="bold")
         self.form_label_font = ctk.CTkFont(family="Segoe UI", size=13)
         self.form_entry_font = ctk.CTkFont(family="Segoe UI", size=13)
@@ -346,7 +356,7 @@ class DrugCalculatorApp:
 
         ctk.CTkLabel(
             card,
-            text=f"Total calculations saved: {self._calculation_count}",
+            text=f"Total calculations saved: {self.history.get_calculation_count()}",
             font=self.inset_font,
             text_color=INSET_TEXT,
             fg_color=INSET,
@@ -566,7 +576,6 @@ class DrugCalculatorApp:
             results=result,
             solvent=solvent,
         )
-        self._calculation_count = self.history.get_calculation_count()
 
     def clear_inputs(self) -> None:
         """Clear the input fields for the current calculator screen."""
@@ -602,6 +611,7 @@ class DrugCalculatorApp:
                 win.iconbitmap(str(icon_path))
         except Exception:
             pass
+        apply_dark_titlebar(win)
 
         ctk.CTkLabel(win, text=title, font=self.form_title_font, text_color=TEXT).pack(pady=(15, 10))
 
@@ -781,45 +791,379 @@ class DrugCalculatorApp:
             results=result,
             solvent=solvent,
         )
-        self._calculation_count = self.history.get_calculation_count()
 
     # ------------------------------------------------------------------
-    # Placeholder for the last migration increment
+    # Calculation History
     # ------------------------------------------------------------------
+    def _configure_treeview_style(self) -> None:
+        """Configure a dark ttk style for the history Treeview and scrollbar."""
+        style = ttk.Style()
+        style.theme_use("clam")
+
+        # CTkFont sizes are auto-scaled by CustomTkinter to match the
+        # display's DPI scaling; a plain ttk.Style font is not. Without
+        # this, "11" on a CTkLabel and "11" here render at visibly
+        # different physical sizes on a scaled display.
+        try:
+            scale = ctk.ScalingTracker.get_widget_scaling(self.root)
+        except Exception:
+            scale = 1.0
+        row_font_size = round(11 * scale)
+        heading_font_size = round(11 * scale)
+        row_height = round(34 * scale)
+
+        style.configure(
+            "Dark.Treeview", background=ROW, fieldbackground=ROW, foreground=TEXT,
+            borderwidth=0, rowheight=row_height, font=("Segoe UI", row_font_size),
+        )
+        style.map("Dark.Treeview", background=[("selected", ACCENT)], foreground=[("selected", BG)])
+        style.configure(
+            "Dark.Treeview.Heading", background=CARD, foreground=MUTED,
+            borderwidth=0, font=("Segoe UI", heading_font_size, "bold"),
+        )
+        style.map("Dark.Treeview.Heading", background=[("active", CARD)])
+
+        style.configure(
+            "Dark.Vertical.TScrollbar", background=ROW, troughcolor=CARD,
+            bordercolor=BORDER, arrowcolor=MUTED,
+        )
+
     def show_history(self) -> None:
-        """Placeholder - migrated in increment 4."""
-        self._show_placeholder("Calculation History")
+        """Display the Calculation History screen with search, filter, and sort."""
+        self.clear_frame()
+        self.current_mode = "history"
+        self._configure_treeview_style()
 
-    def _show_placeholder(self, screen_name: str) -> None:
+        ctk.CTkLabel(
+            self.main_frame, text="Calculation History", font=self.form_title_font, text_color=TEXT
+        ).pack(pady=(16, 10))
+
+        controls = ctk.CTkFrame(self.main_frame, fg_color="transparent")
+        controls.pack(fill="x", padx=30, pady=(0, 10))
+
+        ctk.CTkLabel(controls, text="Search:", font=self.form_label_font, text_color=MUTED).grid(
+            row=0, column=0, padx=(0, 6)
+        )
+        self.search_var = StringVar()
+        self.search_var.trace_add("write", lambda *_a: self.update_history_display())
+        ctk.CTkEntry(
+            controls, textvariable=self.search_var, width=200, fg_color=ROW, border_color=BORDER,
+            text_color=TEXT, font=self.form_entry_font,
+        ).grid(row=0, column=1, padx=(0, 20))
+
+        ctk.CTkLabel(controls, text="Show:", font=self.form_label_font, text_color=MUTED).grid(
+            row=0, column=2, padx=(0, 6)
+        )
+        self.filter_var = StringVar(value="All")
+        ctk.CTkComboBox(
+            controls, variable=self.filter_var, values=["All", "Stock Solutions", "Working Solutions"],
+            width=170, fg_color=ROW, border_color=BORDER, button_color=ROW, text_color=TEXT,
+            dropdown_fg_color=ROW, font=self.form_entry_font,
+            command=lambda _v: self.update_history_display(),
+        ).grid(row=0, column=3, padx=(0, 20))
+
+        ctk.CTkLabel(controls, text="Sort by:", font=self.form_label_font, text_color=MUTED).grid(
+            row=0, column=4, padx=(0, 6)
+        )
+        self.sort_var = StringVar(value="Date (newest first)")
+        ctk.CTkComboBox(
+            controls, variable=self.sort_var,
+            values=["Date (newest first)", "Date (oldest first)", "Drug name (A-Z)", "Drug name (Z-A)"],
+            width=190, fg_color=ROW, border_color=BORDER, button_color=ROW, text_color=TEXT,
+            dropdown_fg_color=ROW, font=self.form_entry_font,
+            command=lambda _v: self._on_sort_dropdown_changed(),
+        ).grid(row=0, column=5)
+
+        tree_frame = ctk.CTkFrame(self.main_frame, fg_color="transparent")
+        tree_frame.pack(fill="both", expand=True, padx=30, pady=(0, 10))
+
+        tree_scroll = ttk.Scrollbar(tree_frame, style="Dark.Vertical.TScrollbar")
+        tree_scroll.pack(side="right", fill="y")
+
+        columns = ("#", "Date", "Drug", "Type", "Value", "Solvent")
+        self.history_tree = ttk.Treeview(
+            tree_frame, columns=columns, show="headings", yscrollcommand=tree_scroll.set,
+            selectmode="browse", style="Dark.Treeview",
+        )
+        tree_scroll.config(command=self.history_tree.yview)
+
+        headings = {
+            "#": ("#", 40, "center"), "Date": ("Date", 100, "w"), "Drug": ("Drug Name", 150, "w"),
+            "Type": ("Type", 80, "center"), "Value": ("Concentration & Volume", 220, "w"),
+            "Solvent": ("Solvent", 100, "w"),
+        }
+        self._header_sort_col: Optional[str] = None
+        self._header_sort_reverse = False
+        for col, (text, width, anchor) in headings.items():
+            self.history_tree.heading(col, text=text, command=lambda c=col: self._on_header_click(c))
+            self.history_tree.column(col, width=width, anchor=anchor)
+
+        self.history_tree.tag_configure("evenrow", background=CARD)
+        self.history_tree.tag_configure("oddrow", background=ROW)
+        self.history_tree.pack(fill="both", expand=True)
+        self.history_tree.bind("<Double-1>", self.show_calculation_details)
+
+        btn_frame = ctk.CTkFrame(self.main_frame, fg_color="transparent")
+        btn_frame.pack(pady=10)
+        ctk.CTkButton(
+            btn_frame, text="View Details", command=lambda: self.show_calculation_details(None),
+            fg_color=ACCENT, hover_color="#4A9FD6", text_color="#0F1C24", font=self.button_font, width=120,
+        ).grid(row=0, column=0, padx=6)
+        ctk.CTkButton(
+            btn_frame, text="Clear History", command=self.clear_history,
+            fg_color=ROW, hover_color=ROW_HOVER, text_color=TEXT, font=self.button_font, width=120,
+        ).grid(row=0, column=1, padx=6)
+        ctk.CTkButton(
+            btn_frame, text="Back to Menu", command=self.show_welcome_screen,
+            fg_color=ROW, hover_color=ROW_HOVER, text_color=TEXT, font=self.button_font, width=120,
+        ).grid(row=0, column=2, padx=6)
+
+        ctk.CTkLabel(
+            self.main_frame, text=f"{APP_VERSION} \u00b7 S. Strasser", font=self.footer_font, text_color=FOOTER_COLOR
+        ).pack(pady=(0, 10))
+
+        self.update_history_display()
+
+    def _format_value_column(self, calc: dict) -> str:
         """
-        Show a placeholder screen for not-yet-migrated screens.
+        Build the "Concentration & Volume" display string for one calculation.
 
         Parameters
         ----------
-        screen_name : str
-            Name of the screen to display.
+        calc : dict
+            A calculation record.
+
+        Returns
+        -------
+        str
         """
-        self.clear_frame()
-        self.current_mode = None
+        inputs = calc["inputs"]
+        if calc["calculation_type"] == "Stock from Powder":
+            conc = format_number(inputs.get("target_concentration", 0))
+            vol = format_number(inputs.get("target_volume", 0))
+            conc_unit = inputs.get("concentration_unit", "?")
+            vol_unit = inputs.get("volume_unit", "?")
+            return f"{conc} {conc_unit} in {vol} {vol_unit}"
+        target_conc = format_number(inputs.get("target_concentration", 0))
+        target_vol = format_number(inputs.get("target_volume", 0))
+        target_unit = inputs.get("target_concentration_unit", inputs.get("concentration_unit", "?"))
+        vol_unit = inputs.get("volume_unit", "?")
+        return f"{target_conc} {target_unit} in {target_vol} {vol_unit}"
+
+    def _get_sorted_filtered_calculations(self) -> list:
+        """
+        Apply the current search, filter, and sort settings to the history.
+
+        A column header click (``self._header_sort_col``) takes priority
+        over the "Sort by" dropdown; picking from the dropdown clears it.
+
+        Returns
+        -------
+        list of dict
+            Calculations after filtering and sorting.
+        """
+        calculations = self.history.get_all_calculations()
+
+        search_term = self.search_var.get().lower()
+        if search_term:
+            calculations = [
+                c for c in calculations
+                if search_term in c["drug_name"].lower() or search_term in c.get("solvent", "").lower()
+            ]
+
+        filter_type = self.filter_var.get()
+        if filter_type == "Stock Solutions":
+            calculations = [c for c in calculations if c["calculation_type"] == "Stock from Powder"]
+        elif filter_type == "Working Solutions":
+            calculations = [c for c in calculations if c["calculation_type"] == "Working from Stock"]
+
+        self.current_calculations = calculations
+        sorted_calcs = calculations.copy()
+
+        if self._header_sort_col:
+            column_keys = {
+                "Date": lambda c: c["timestamp"],
+                "Drug": lambda c: c["drug_name"].lower(),
+                "Type": lambda c: c["calculation_type"],
+                "Solvent": lambda c: c.get("solvent", "").lower(),
+                "Value": lambda c: self._format_value_column(c).lower(),
+            }
+            key = column_keys.get(self._header_sort_col, lambda c: c["timestamp"])
+            sorted_calcs.sort(key=key, reverse=self._header_sort_reverse)
+            return sorted_calcs
+
+        sort_by = self.sort_var.get()
+        if sort_by == "Date (newest first)":
+            sorted_calcs.sort(key=lambda x: x["timestamp"], reverse=True)
+        elif sort_by == "Date (oldest first)":
+            sorted_calcs.sort(key=lambda x: x["timestamp"])
+        elif sort_by == "Drug name (A-Z)":
+            sorted_calcs.sort(key=lambda x: x["drug_name"].lower())
+        elif sort_by == "Drug name (Z-A)":
+            sorted_calcs.sort(key=lambda x: x["drug_name"].lower(), reverse=True)
+        return sorted_calcs
+
+    def _on_sort_dropdown_changed(self) -> None:
+        """Reset any column header sort and apply the "Sort by" dropdown instead."""
+        self._header_sort_col = None
+        for c, label in HISTORY_COLUMN_LABELS.items():
+            self.history_tree.heading(c, text=label)
+        self.update_history_display()
+
+    def _on_header_click(self, col: str) -> None:
+        """
+        Sort the history by the clicked column, toggling direction on repeat clicks.
+
+        Parameters
+        ----------
+        col : str
+            Column id that was clicked.
+        """
+        if self._header_sort_col == col:
+            self._header_sort_reverse = not self._header_sort_reverse
+        else:
+            self._header_sort_col = col
+            self._header_sort_reverse = False
+
+        arrow = " \u25bc" if self._header_sort_reverse else " \u25b2"
+        for c, label in HISTORY_COLUMN_LABELS.items():
+            self.history_tree.heading(c, text=label + (arrow if c == col else ""))
+
+        self.update_history_display()
+
+    def update_history_display(self) -> None:
+        """Refresh the Treeview based on the current search, filter, and sort settings."""
+        for item in self.history_tree.get_children():
+            self.history_tree.delete(item)
+
+        for i, calc in enumerate(self._get_sorted_filtered_calculations(), 1):
+            date = calc["timestamp"].split("T")[0]
+            calc_type = "Stock" if calc["calculation_type"] == "Stock from Powder" else "Working"
+            solvent = calc.get("solvent", "N/A")
+            value = self._format_value_column(calc)
+
+            tag = "evenrow" if i % 2 == 0 else "oddrow"
+            self.history_tree.insert(
+                "", "end", values=(i, date, calc["drug_name"], calc_type, value, solvent), tags=(tag,)
+            )
+
+    def show_calculation_details(self, _event) -> None:
+        """Show the selected calculation's full details in a popup."""
+        selection = self.history_tree.selection()
+        if not selection:
+            return
+
+        display_num = int(self.history_tree.item(selection[0])["values"][0])
+        calc = self._get_sorted_filtered_calculations()[display_num - 1]
+
+        timestamp = calc["timestamp"].split("T")[0]
+        drug_name = calc["drug_name"]
+        solvent = calc.get("solvent", "Not specified")
+        inputs = calc["inputs"]
+        results = calc["results"]
+
+        header = f"#{display_num} \u00b7 {timestamp} \u00b7 {drug_name}\n\n"
+
+        if calc["calculation_type"] == "Stock from Powder":
+            content = header + (
+                f"STOCK SOLUTION\n\n"
+                f"Drug:                {drug_name}\n"
+                f"Molecular Weight:    {format_number(inputs.get('molecular_weight', 0))} g/mol\n"
+                f"Target:              {format_number(inputs.get('target_concentration', 0))} "
+                f"{inputs.get('concentration_unit', '?')} in {format_number(inputs.get('target_volume', 0))} "
+                f"{inputs.get('volume_unit', '?')}\n"
+                f"Solvent:             {solvent}\n\n"
+                f"WEIGH:  {format_result_with_unit(results.get('mass_mg', 0), 'mg')}\n"
+                f"DISSOLVE IN:  {format_number(inputs.get('target_volume', 0))} "
+                f"{inputs.get('volume_unit', '?')} of {solvent}\n"
+            )
+        else:
+            vol_unit = inputs.get("volume_unit", "?")
+            stock_vol, stock_vol_unit = convert_to_readable_unit(results.get("stock_volume", 0), vol_unit)
+            solvent_vol, solvent_vol_unit = convert_to_readable_unit(results.get("solvent_volume", 0), vol_unit)
+            stock_unit = inputs.get("stock_concentration_unit", inputs.get("concentration_unit", "?"))
+            target_unit = inputs.get("target_concentration_unit", inputs.get("concentration_unit", "?"))
+            content = header + (
+                f"WORKING SOLUTION\n\n"
+                f"Drug:                {drug_name}\n"
+                f"From Stock:          {format_number(inputs.get('stock_concentration', 0))} {stock_unit}\n"
+                f"Target:              {format_number(inputs.get('target_concentration', 0))} {target_unit} in "
+                f"{format_number(inputs.get('target_volume', 0))} {vol_unit}\n"
+                f"Dilution Factor:     {format_number(results.get('dilution_factor', 0))}x\n"
+                f"Solvent:             {solvent}\n\n"
+                f"TAKE:  {format_result_with_unit(stock_vol, stock_vol_unit)} of stock\n"
+                f"ADD:   {format_result_with_unit(solvent_vol, solvent_vol_unit)} of {solvent}\n"
+            )
+
+        self.show_results_window(f"Calculation #{display_num}", drug_name, content)
+
+    def _confirm_dialog(self, title: str, message: str) -> bool:
+        """
+        Show a dark-styled Yes/No confirmation window and block until answered.
+
+        Parameters
+        ----------
+        title : str
+            Window title.
+        message : str
+            Question to display.
+
+        Returns
+        -------
+        bool
+            True if the user confirmed, False otherwise.
+        """
+        win = ctk.CTkToplevel(self.root)
+        win.title(title)
+        win.geometry("380x160")
+        win.resizable(False, False)
+        win.configure(fg_color=BG)
+        win.transient(self.root)
+        win.grab_set()
+
+        try:
+            icon_path = _asset_path("icon.ico")
+            if icon_path.exists():
+                win.iconbitmap(str(icon_path))
+        except Exception:
+            pass
+        apply_dark_titlebar(win)
+
+        result = {"confirmed": False}
 
         ctk.CTkLabel(
-            self.main_frame,
-            text=f"{screen_name}\n\n(coming in the next migration step)",
-            font=self.placeholder_font,
-            text_color=MUTED,
-            justify="center",
-        ).pack(pady=(100, 20))
+            win, text=message, font=self.form_label_font, text_color=TEXT, wraplength=320, justify="center"
+        ).pack(expand=True, padx=20, pady=(20, 10))
 
+        def on_yes() -> None:
+            result["confirmed"] = True
+            win.destroy()
+
+        btn_frame = ctk.CTkFrame(win, fg_color="transparent")
+        btn_frame.pack(pady=(0, 20))
         ctk.CTkButton(
-            self.main_frame,
-            text="Back to Menu",
-            command=self.show_welcome_screen,
-            width=140,
-            fg_color=ROW,
-            hover_color=ROW_HOVER,
-            text_color=TEXT,
-            font=self.button_font,
-        ).pack()
+            btn_frame, text="Yes", command=on_yes,
+            fg_color=ACCENT, hover_color="#4A9FD6", text_color="#0F1C24", font=self.button_font, width=90,
+        ).grid(row=0, column=0, padx=6)
+        ctk.CTkButton(
+            btn_frame, text="Cancel", command=win.destroy,
+            fg_color=ROW, hover_color=ROW_HOVER, text_color=TEXT, font=self.button_font, width=90,
+        ).grid(row=0, column=1, padx=6)
+
+        win.update_idletasks()
+        x = self.root.winfo_rootx() + (self.root.winfo_width() // 2) - (win.winfo_width() // 2)
+        y = self.root.winfo_rooty() + (self.root.winfo_height() // 2) - (win.winfo_height() // 2)
+        win.geometry(f"+{x}+{y}")
+
+        win.wait_window()
+        return result["confirmed"]
+
+    def clear_history(self) -> None:
+        """Delete all calculation history, after confirmation."""
+        if self._confirm_dialog("Confirm Clear", "Are you sure you want to delete all calculation history?"):
+            self.history.clear_history()
+            self.update_history_display()
+            messagebox.showinfo("History Cleared", "All calculations have been deleted")
 
     # ------------------------------------------------------------------
     # About dialog
