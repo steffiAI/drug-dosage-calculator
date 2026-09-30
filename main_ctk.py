@@ -1344,7 +1344,8 @@ class DrugCalculatorApp:
         if not selection:
             return
 
-        display_num = int(self.history_tree.item(selection[0])["values"][0])
+        # Index 1 because index 0 is the checkbox column
+        display_num = int(self.history_tree.item(selection[0])["values"][1])
         calc = self._get_sorted_filtered_calculations()[display_num - 1]
 
         timestamp = calc["timestamp"].split("T")[0]
@@ -1506,8 +1507,8 @@ class DrugCalculatorApp:
         if not item:
             return
 
-        # Only toggle checkbox if clicking in the checkbox column (first column #0)
-        if column != "#0":
+        # Only toggle checkbox if clicking in the checkbox column (first column #1)
+        if column != "#1":
             return
 
         # Get the display number (second column, index 1)
