@@ -6,6 +6,7 @@ dependencies = [
     "customtkinter>=6.0.0",
     "pillow>=12.3.0",
     "pubchempy==1.0.5",
+    "reportlab>=4.0.0",
 ]
 
 [dependency-groups]

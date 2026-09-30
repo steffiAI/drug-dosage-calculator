@@ -24,6 +24,7 @@ from formatters import (  # noqa: E402
     format_number, validate_decimal_input, format_result_with_unit, convert_to_readable_unit,
 )
 from font_manager import FontManager  # noqa: E402
+from pdf_export import PDFExporter  # noqa: E402
 
 ctk.set_appearance_mode("dark")
 ctk.set_default_color_theme("blue")
@@ -40,6 +41,7 @@ TEXT = "#FFFFFF"
 MUTED = "#9AA0A6"
 INSET_TEXT = "#B9BEC3"
 FOOTER_COLOR = "#7D8287"
+SUCCESS = "#6FCF6F"
 
 APP_VERSION = "v3.1.0"
 COLUMN_WIDTH = 640
@@ -193,6 +195,7 @@ class DrugCalculatorApp:
         self.current_mode: Optional[str] = None
         self.history = CalculationHistory()
         self.preferences = UserPreferences()
+        self.pdf_exporter = PDFExporter()
 
         self.font_manager = FontManager(self.preferences.get_font_scale())
         self._setup_fonts()
@@ -660,15 +663,23 @@ class DrugCalculatorApp:
             f"WEIGH:  {format_result_with_unit(result['mass_mg'], 'mg')}\n"
             f"DISSOLVE IN:  {format_number(vol)} {vol_unit} {solvent or 'solvent'}\n"
         )
-        self.show_results_window("Stock Solution Preparation", drug_name, content)
+
+        calc_data = {
+            'type': "Stock from Powder",
+            'inputs': {
+                "molecular_weight": mw, "target_concentration": conc, "target_volume": vol,
+                "concentration_unit": conc_unit, "volume_unit": vol_unit,
+            },
+            'results': result,
+            'solvent': solvent,
+        }
+
+        self.show_results_window("Stock Solution Preparation", drug_name, content, calc_data)
 
         self.history.add_calculation(
             calculation_type="Stock from Powder",
             drug_name=drug_name,
-            inputs={
-                "molecular_weight": mw, "target_concentration": conc, "target_volume": vol,
-                "concentration_unit": conc_unit, "volume_unit": vol_unit,
-            },
+            inputs=calc_data['inputs'],
             results=result,
             solvent=solvent,
         )
@@ -682,9 +693,9 @@ class DrugCalculatorApp:
             for var in (self.drug_name_var, self.stock_conc_var, self.target_conc_var, self.target_vol_var, self.solvent_var):
                 var.set("")
 
-    def show_results_window(self, title: str, drug_name: str, content: str) -> None:
+    def show_results_window(self, title: str, drug_name: str, content: str, calc_data: dict = None) -> None:
         """
-        Show calculation results in a popup window with a copy-to-clipboard option.
+        Show calculation results in a professional popup window with export options.
 
         Parameters
         ----------
@@ -694,10 +705,11 @@ class DrugCalculatorApp:
             Drug name, appended to the window title.
         content : str
             Formatted result text.
+        calc_data : dict, optional
+            Calculation data for PDF export (type, inputs, results, solvent).
         """
         win = ctk.CTkToplevel(self.root)
         win.title(f"{title} - {drug_name}")
-        win.geometry("600x400")
         win.configure(fg_color=BG)
         win.transient(self.root)
 
@@ -708,71 +720,136 @@ class DrugCalculatorApp:
         except Exception:
             pass
         apply_dark_titlebar(win)
-        center_window(win, self.root)
 
-        ctk.CTkLabel(win, text=title, font=self.form_title_font, text_color=TEXT).pack(pady=(15, 10))
+        # Header with icon
+        header = ctk.CTkFrame(win, fg_color=CARD, height=60)
+        header.pack(fill="x", padx=0, pady=0)
+        header.pack_propagate(False)
+
+        icon_name = "tube" if "Stock" in title else "pipette"
+        icon_img = self._load_icon(icon_name, 32)
+        ctk.CTkLabel(header, image=icon_img, text="").pack(side="left", padx=(20, 10), pady=14)
+
+        header_text = ctk.CTkFrame(header, fg_color="transparent")
+        header_text.pack(side="left", fill="both", expand=True, pady=14)
+        ctk.CTkLabel(
+            header_text, text=title, font=self.form_title_font, text_color=TEXT, anchor="w"
+        ).pack(anchor="w")
+        ctk.CTkLabel(
+            header_text, text=drug_name, font=self.form_subtitle_font, text_color=ACCENT, anchor="w"
+        ).pack(anchor="w")
+
+        # Content area with better formatting
+        content_frame = ctk.CTkFrame(win, fg_color="transparent")
+        content_frame.pack(fill="both", expand=True, padx=20, pady=20)
 
         text = ctk.CTkTextbox(
-            win, fg_color=ROW, text_color=TEXT, font=self.font_manager.get_font('monospace', family='Consolas'), wrap="word"
+            content_frame,
+            fg_color=ROW,
+            text_color=TEXT,
+            font=self.font_manager.get_font('monospace', family='Consolas'),
+            wrap="word",
+            border_width=1,
+            border_color=BORDER,
         )
-        text.pack(fill="both", expand=True, padx=15, pady=(0, 10))
+        text.pack(fill="both", expand=True)
         text.insert("1.0", content)
         text.configure(state="disabled")
 
         def copy_to_clipboard() -> None:
             win.clipboard_clear()
             win.clipboard_append(content)
+            self._show_toast(win, "Protocol copied to clipboard!", SUCCESS)
 
-            confirm = ctk.CTkToplevel(win)
-            confirm.title("Copied")
-            confirm.geometry("350x180")
-            confirm.configure(fg_color=BG)
-            confirm.transient(win)
-            confirm.grab_set()
+        def export_to_pdf() -> None:
+            if not calc_data:
+                messagebox.showerror("Export Error", "No calculation data available for export")
+                return
 
             try:
-                icon_path = _asset_path("icon.ico")
-                if icon_path.exists():
-                    confirm.iconbitmap(str(icon_path))
-            except Exception:
-                pass
-            apply_dark_titlebar(confirm)
-            center_window(confirm, win)
+                filepath = self.pdf_exporter.export_calculation(
+                    calculation_type=calc_data['type'],
+                    drug_name=drug_name,
+                    inputs=calc_data['inputs'],
+                    results=calc_data['results'],
+                    solvent=calc_data.get('solvent', ''),
+                )
+                self._show_toast(win, f"PDF saved to:\n{filepath.name}", SUCCESS, width=400)
+            except Exception as e:
+                messagebox.showerror("Export Error", f"Failed to export PDF:\n{str(e)}")
 
-            ctk.CTkLabel(
-                confirm,
-                text="Copied",
-                font=self.form_title_font,
-                text_color=TEXT
-            ).pack(pady=(15, 10))
+        # Button bar with professional styling
+        btn_bar = ctk.CTkFrame(win, fg_color=CARD, height=70)
+        btn_bar.pack(fill="x", padx=0, pady=0)
+        btn_bar.pack_propagate(False)
 
-            ctk.CTkLabel(
-                confirm,
-                text="Protocol copied to clipboard!",
-                font=self.font_manager.get_font('body'),
-                text_color=TEXT,
-                wraplength=300
-            ).pack(pady=(0, 20), padx=20)
+        btn_frame = ctk.CTkFrame(btn_bar, fg_color="transparent")
+        btn_frame.pack(expand=True)
 
-            ctk.CTkButton(
-                confirm,
-                text="OK",
-                command=confirm.destroy,
-                fg_color=ROW,
-                hover_color=ROW_HOVER,
-                text_color=TEXT,
-                width=100
-            ).pack(pady=(0, 20))
-
-        btn_frame = ctk.CTkFrame(win, fg_color="transparent")
-        btn_frame.pack(pady=(0, 15))
         ctk.CTkButton(
-            btn_frame, text="Copy Protocol", command=copy_to_clipboard,
-            fg_color=ROW, hover_color=ROW_HOVER, text_color=TEXT,
-        ).grid(row=0, column=0, padx=5)
+            btn_frame,
+            text="Export to PDF",
+            command=export_to_pdf,
+            fg_color=ACCENT,
+            hover_color="#4A9FD6",
+            text_color="#0F1C24",
+            font=self.button_font,
+            width=140,
+            height=36,
+        ).grid(row=0, column=0, padx=6)
+
         ctk.CTkButton(
-            btn_frame, text="Close", command=win.destroy, fg_color=ROW, hover_color=ROW_HOVER, text_color=TEXT
-        ).grid(row=0, column=1, padx=5)
+            btn_frame,
+            text="Copy to Clipboard",
+            command=copy_to_clipboard,
+            fg_color=ROW,
+            hover_color=ROW_HOVER,
+            text_color=TEXT,
+            font=self.button_font,
+            width=150,
+            height=36,
+        ).grid(row=0, column=1, padx=6)
+
+        ctk.CTkButton(
+            btn_frame,
+            text="Close",
+            command=win.destroy,
+            fg_color=ROW,
+            hover_color=ROW_HOVER,
+            text_color=MUTED,
+            font=self.button_font,
+            width=100,
+            height=36,
+        ).grid(row=0, column=2, padx=6)
+
+        win.update_idletasks()
+        center_window(win, self.root)
+
+    def _show_toast(self, parent, message: str, color: str, width: int = 350) -> None:
+        """Show a brief toast notification."""
+        toast = ctk.CTkToplevel(parent)
+        toast.title("")
+        toast.configure(fg_color=BG)
+        toast.transient(parent)
+        toast.overrideredirect(True)
+
+        frame = ctk.CTkFrame(toast, fg_color=CARD, border_width=2, border_color=color, corner_radius=8)
+        frame.pack(padx=2, pady=2)
+
+        ctk.CTkLabel(
+            frame,
+            text=message,
+            font=self.font_manager.get_font('body'),
+            text_color=color,
+            wraplength=width-40,
+        ).pack(padx=20, pady=15)
+
+        toast.update_idletasks()
+        x = parent.winfo_rootx() + (parent.winfo_width() // 2) - (toast.winfo_width() // 2)
+        y = parent.winfo_rooty() + (parent.winfo_height() // 2) - (toast.winfo_height() // 2)
+        toast.geometry(f"+{x}+{y}")
+
+        toast.after(2500, toast.destroy)
 
     # ------------------------------------------------------------------
     # Working Solution Calculator
@@ -915,16 +992,24 @@ class DrugCalculatorApp:
             f"TAKE:  {format_result_with_unit(stock_vol, stock_vol_unit)} of stock\n"
             f"ADD:   {format_result_with_unit(solvent_vol, solvent_vol_unit)} of {solvent or 'solvent'}\n"
         )
-        self.show_results_window("Working Solution Preparation", drug_name, content)
 
-        self.history.add_calculation(
-            calculation_type="Working from Stock",
-            drug_name=drug_name,
-            inputs={
+        calc_data = {
+            'type': "Working from Stock",
+            'inputs': {
                 "stock_concentration": stock_conc, "target_concentration": target_conc,
                 "target_volume": target_vol, "stock_concentration_unit": stock_conc_unit,
                 "target_concentration_unit": target_conc_unit, "volume_unit": vol_unit,
             },
+            'results': result,
+            'solvent': solvent,
+        }
+
+        self.show_results_window("Working Solution Preparation", drug_name, content, calc_data)
+
+        self.history.add_calculation(
+            calculation_type="Working from Stock",
+            drug_name=drug_name,
+            inputs=calc_data['inputs'],
             results=result,
             solvent=solvent,
         )
@@ -1233,7 +1318,14 @@ class DrugCalculatorApp:
                 f"ADD:   {format_result_with_unit(solvent_vol, solvent_vol_unit)} of {solvent}\n"
             )
 
-        self.show_results_window(f"Calculation #{display_num}", drug_name, content)
+        calc_data = {
+            'type': calc["calculation_type"],
+            'inputs': inputs,
+            'results': results,
+            'solvent': solvent,
+        }
+
+        self.show_results_window(f"Calculation #{display_num}", drug_name, content, calc_data)
 
     def _confirm_dialog(self, title: str, message: str) -> bool:
         """
