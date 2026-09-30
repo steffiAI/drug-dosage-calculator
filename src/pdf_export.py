@@ -14,7 +14,7 @@ from typing import Optional
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.units import inch
 from reportlab.lib import colors
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, PageBreak
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.enums import TA_LEFT, TA_RIGHT
 
@@ -308,7 +308,7 @@ class PDFExporter:
         ]))
         story.append(protocol_table)
 
-    def export_multiple_calculations(self, calculations: list, filepath: Path) -> Path:
+    def export_multiple_calculations(self, calculations: list, filepath: Path, page_breaks: bool = False) -> Path:
         """
         Export multiple calculations to a single PDF.
 
@@ -318,6 +318,9 @@ class PDFExporter:
             List of calculation records from history.
         filepath : Path
             Path for the output PDF file.
+        page_breaks : bool, default=False
+            If True, each protocol starts on a new page. If False, protocols
+            are separated by a light line on the same page.
 
         Returns
         -------
@@ -455,14 +458,17 @@ class PDFExporter:
             else:
                 self._add_dilution_protocol(story, inputs, results, solvent, body_style)
 
-            # Add separator between protocols (except after the last one)
+            # Add separator or page break between protocols (except after the last one)
             if idx < len(calculations):
-                story.append(Spacer(1, 0.3*inch))
-                separator = Table([['']], colWidths=[6.5*inch])
-                separator.setStyle(TableStyle([
-                    ('LINEABOVE', (0, 0), (-1, 0), 0.5, colors.HexColor('#EEEEEE')),
-                ]))
-                story.append(separator)
+                if page_breaks:
+                    story.append(PageBreak())
+                else:
+                    story.append(Spacer(1, 0.3*inch))
+                    separator = Table([['']], colWidths=[6.5*inch])
+                    separator.setStyle(TableStyle([
+                        ('LINEABOVE', (0, 0), (-1, 0), 0.5, colors.HexColor('#EEEEEE')),
+                    ]))
+                    story.append(separator)
 
         # Footer
         story.append(Spacer(1, 0.4*inch))

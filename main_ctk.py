@@ -48,7 +48,7 @@ APP_VERSION = "v3.1.0"
 COLUMN_WIDTH = 640
 
 HISTORY_COLUMN_LABELS = {
-    "#": "#", "Date": "Date", "Drug": "Drug Name", "Type": "Type",
+    "☐": "☐", "#": "#", "Date": "Date", "Drug": "Drug Name", "Type": "Type",
     "Value": "Concentration & Volume", "Solvent": "Solvent",
 }
 
@@ -1082,11 +1082,34 @@ class DrugCalculatorApp:
         self.clear_frame()
         self.current_mode = "history"
         self._configure_treeview_style()
+        self.selected_calculations = set()  # Track checked items
 
         ctk.CTkLabel(
             self.main_frame, text="Calculation History", font=self.form_title_font, text_color=TEXT
         ).pack(pady=(16, 10))
 
+        # Selection controls
+        selection_bar = ctk.CTkFrame(self.main_frame, fg_color="transparent")
+        selection_bar.pack(fill="x", padx=30, pady=(0, 8))
+
+        ctk.CTkButton(
+            selection_bar, text="Select All", command=self.select_all_calculations,
+            fg_color=ROW, hover_color=ROW_HOVER, text_color=TEXT, font=self.form_label_font,
+            width=100, height=28,
+        ).pack(side="left", padx=(0, 8))
+
+        ctk.CTkButton(
+            selection_bar, text="Deselect All", command=self.deselect_all_calculations,
+            fg_color=ROW, hover_color=ROW_HOVER, text_color=TEXT, font=self.form_label_font,
+            width=110, height=28,
+        ).pack(side="left")
+
+        self.selection_counter_label = ctk.CTkLabel(
+            selection_bar, text="0 selected", font=self.form_label_font, text_color=ACCENT
+        )
+        self.selection_counter_label.pack(side="left", padx=20)
+
+        # Search and filter controls
         controls = ctk.CTkFrame(self.main_frame, fg_color="transparent")
         controls.pack(fill="x", padx=30, pady=(0, 10))
 
@@ -1129,14 +1152,15 @@ class DrugCalculatorApp:
         tree_scroll = ttk.Scrollbar(tree_frame, style="Dark.Vertical.TScrollbar")
         tree_scroll.pack(side="right", fill="y")
 
-        columns = ("#", "Date", "Drug", "Type", "Value", "Solvent")
+        columns = ("☐", "#", "Date", "Drug", "Type", "Value", "Solvent")
         self.history_tree = ttk.Treeview(
             tree_frame, columns=columns, show="headings", yscrollcommand=tree_scroll.set,
-            selectmode="extended", style="Dark.Treeview",
+            selectmode="browse", style="Dark.Treeview",
         )
         tree_scroll.config(command=self.history_tree.yview)
 
         headings = {
+            "☐": ("☐", 30, "center"),
             "#": ("#", 40, "center"), "Date": ("Date", 100, "w"), "Drug": ("Drug Name", 150, "w"),
             "Type": ("Type", 80, "center"), "Value": ("Concentration & Volume", 220, "w"),
             "Solvent": ("Solvent", 100, "w"),
@@ -1144,13 +1168,18 @@ class DrugCalculatorApp:
         self._header_sort_col: Optional[str] = None
         self._header_sort_reverse = False
         for col, (text, width, anchor) in headings.items():
-            self.history_tree.heading(col, text=text, command=lambda c=col: self._on_header_click(c))
+            if col == "☐":
+                # Checkbox column header - click to toggle all
+                self.history_tree.heading(col, text=text, command=self.toggle_all_calculations)
+            else:
+                self.history_tree.heading(col, text=text, command=lambda c=col: self._on_header_click(c))
             self.history_tree.column(col, width=width, anchor=anchor)
 
         self.history_tree.tag_configure("evenrow", background=CARD)
         self.history_tree.tag_configure("oddrow", background=ROW)
         self.history_tree.pack(fill="both", expand=True)
         self.history_tree.bind("<Double-1>", self.show_calculation_details)
+        self.history_tree.bind("<Button-1>", self._on_tree_click)
 
         btn_frame = ctk.CTkFrame(self.main_frame, fg_color="transparent")
         btn_frame.pack(pady=10)
@@ -1295,10 +1324,19 @@ class DrugCalculatorApp:
             solvent = calc.get("solvent", "N/A")
             value = self._format_value_column(calc)
 
+            # Check if this calculation is selected
+            checkbox = "☑" if i in self.selected_calculations else "☐"
+
             tag = "evenrow" if i % 2 == 0 else "oddrow"
             self.history_tree.insert(
-                "", "end", values=(i, date, calc["drug_name"], calc_type, value, solvent), tags=(tag,)
+                "", "end", values=(checkbox, i, date, calc["drug_name"], calc_type, value, solvent), tags=(tag,)
             )
+
+        # Update selection counter
+        if hasattr(self, 'selection_counter_label'):
+            count = len(self.selected_calculations)
+            text = f"{count} selected" if count != 1 else "1 selected"
+            self.selection_counter_label.configure(text=text)
 
     def show_calculation_details(self, _event) -> None:
         """Show the selected calculation's full details in a popup."""
@@ -1415,20 +1453,225 @@ class DrugCalculatorApp:
         win.wait_window()
         return result["confirmed"]
 
+    def _show_success_dialog(self, title: str, message: str) -> None:
+        """
+        Show a dark-styled success message dialog.
+
+        Parameters
+        ----------
+        title : str
+            Window title.
+        message : str
+            Success message to display.
+        """
+        win = ctk.CTkToplevel(self.root)
+        win.title(title)
+        win.geometry("420x180")
+        win.resizable(False, False)
+        win.configure(fg_color=BG)
+        win.transient(self.root)
+        win.grab_set()
+
+        try:
+            icon_path = _asset_path("icon.ico")
+            if icon_path.exists():
+                win.iconbitmap(str(icon_path))
+        except Exception:
+            pass
+        apply_dark_titlebar(win)
+
+        ctk.CTkLabel(
+            win, text=message, font=self.form_label_font, text_color=TEXT,
+            wraplength=360, justify="center"
+        ).pack(expand=True, padx=20, pady=(20, 10))
+
+        ctk.CTkButton(
+            win, text="OK", command=win.destroy,
+            fg_color=ACCENT, hover_color="#4A9FD6", text_color="#0F1C24",
+            font=self.button_font, width=100,
+        ).pack(pady=(0, 20))
+
+        center_window(win, self.root)
+        win.wait_window()
+
+    def _on_tree_click(self, event) -> None:
+        """Handle clicks on the tree to toggle checkboxes."""
+        region = self.history_tree.identify("region", event.x, event.y)
+        if region != "cell":
+            return
+
+        column = self.history_tree.identify_column(event.x)
+        item = self.history_tree.identify_row(event.y)
+
+        if not item:
+            return
+
+        # Only toggle checkbox if clicking in the checkbox column (first column #0)
+        if column != "#0":
+            return
+
+        # Get the display number (second column, index 1)
+        values = self.history_tree.item(item)["values"]
+        if not values:
+            return
+
+        display_num = int(values[1])  # Skip checkbox column, get #
+
+        # Toggle checkbox
+        if display_num in self.selected_calculations:
+            self.selected_calculations.remove(display_num)
+        else:
+            self.selected_calculations.add(display_num)
+
+        self.update_history_display()
+
+    def select_all_calculations(self) -> None:
+        """Select all visible calculations."""
+        for i, _ in enumerate(self._get_sorted_filtered_calculations(), 1):
+            self.selected_calculations.add(i)
+        self.update_history_display()
+
+    def deselect_all_calculations(self) -> None:
+        """Deselect all calculations."""
+        self.selected_calculations.clear()
+        self.update_history_display()
+
+    def toggle_all_calculations(self) -> None:
+        """Toggle all visible calculations."""
+        visible_count = len(self._get_sorted_filtered_calculations())
+        visible_nums = set(range(1, visible_count + 1))
+
+        # If all visible are selected, deselect all; otherwise select all visible
+        if visible_nums.issubset(self.selected_calculations):
+            self.selected_calculations -= visible_nums
+        else:
+            self.selected_calculations |= visible_nums
+
+        self.update_history_display()
+
+    def _show_export_options_dialog(self) -> Optional[dict]:
+        """Show export options dialog for multiple calculations."""
+        dialog = ctk.CTkToplevel(self.root)
+        dialog.title("Export Options")
+        dialog.geometry("450x400")
+        dialog.configure(fg_color=BG)
+        dialog.transient(self.root)
+        dialog.grab_set()
+        dialog.resizable(False, False)
+
+        try:
+            icon_path = _asset_path("icon.ico")
+            if icon_path.exists():
+                dialog.iconbitmap(str(icon_path))
+        except Exception:
+            pass
+        apply_dark_titlebar(dialog)
+
+        result = {'cancelled': True, 'sort': 'table', 'page_breaks': False}
+
+        content = ctk.CTkFrame(dialog, fg_color="transparent")
+        content.pack(fill="both", expand=True, padx=25, pady=20)
+
+        ctk.CTkLabel(
+            content, text="Export Options", font=self.form_title_font, text_color=TEXT
+        ).pack(pady=(0, 15))
+
+        # Sort order
+        ctk.CTkLabel(
+            content, text="Sort Order in PDF:", font=self.form_label_font, text_color=TEXT, anchor="w"
+        ).pack(anchor="w", pady=(0, 8))
+
+        sort_var = StringVar(value="table")
+        sort_options = [
+            ("Current Table Order", "table"),
+            ("By Drug Name (A-Z)", "drug_name"),
+            ("By Date (Chronological)", "date"),
+            ("By Type (Stock, then Working)", "type"),
+        ]
+
+        for label, value in sort_options:
+            ctk.CTkRadioButton(
+                content, text=label, variable=sort_var, value=value,
+                fg_color=ACCENT, hover_color="#4A9FD6", text_color=TEXT,
+                font=self.form_label_font,
+            ).pack(anchor="w", pady=2, padx=10)
+
+        # Page breaks
+        ctk.CTkLabel(
+            content, text="Layout:", font=self.form_label_font, text_color=TEXT, anchor="w"
+        ).pack(anchor="w", pady=(15, 8))
+
+        page_breaks_var = tk.IntVar(value=0)
+        ctk.CTkCheckBox(
+            content, text="Start each protocol on a new page",
+            variable=page_breaks_var,
+            fg_color=ACCENT, hover_color="#4A9FD6", text_color=TEXT,
+            font=self.form_label_font,
+        ).pack(anchor="w", padx=10)
+
+        # Buttons
+        def on_ok():
+            result['cancelled'] = False
+            result['sort'] = sort_var.get()
+            result['page_breaks'] = page_breaks_var.get() == 1
+            dialog.destroy()
+
+        btn_frame = ctk.CTkFrame(content, fg_color="transparent")
+        btn_frame.pack(pady=(20, 0))
+
+        ctk.CTkButton(
+            btn_frame, text="OK", command=on_ok,
+            fg_color=ACCENT, hover_color="#4A9FD6", text_color="#0F1C24",
+            font=self.button_font, width=100,
+        ).grid(row=0, column=0, padx=6)
+
+        ctk.CTkButton(
+            btn_frame, text="Cancel", command=dialog.destroy,
+            fg_color=ROW, hover_color=ROW_HOVER, text_color=TEXT,
+            font=self.button_font, width=100,
+        ).grid(row=0, column=1, padx=6)
+
+        dialog.update_idletasks()
+        center_window(dialog, self.root)
+        dialog.wait_window()
+
+        return None if result['cancelled'] else result
+
     def export_selected_to_pdf(self) -> None:
         """Export selected calculations to a single PDF."""
-        selection = self.history_tree.selection()
-        if not selection:
-            messagebox.showwarning("No Selection", "Please select one or more calculations to export.\n\nTip: Hold Ctrl to select multiple, or Shift to select a range.")
+        if not self.selected_calculations:
+            messagebox.showwarning("No Selection", "Please select one or more calculations to export.\n\nTip: Click checkboxes to select calculations.")
             return
 
         try:
             # Get selected calculations
-            selected_calcs = []
-            for item in selection:
-                display_num = int(self.history_tree.item(item)["values"][0])
-                calc = self._get_sorted_filtered_calculations()[display_num - 1]
-                selected_calcs.append(calc)
+            all_calcs = self._get_sorted_filtered_calculations()
+            selected_calcs = [all_calcs[i - 1] for i in sorted(self.selected_calculations) if i <= len(all_calcs)]
+
+            if not selected_calcs:
+                messagebox.showwarning("No Selection", "No valid calculations selected.")
+                return
+
+            # Export options for multiple calculations
+            sort_order = "table"
+            page_breaks = False
+
+            if len(selected_calcs) > 1:
+                export_options = self._show_export_options_dialog()
+                if export_options is None:  # User cancelled
+                    return
+                sort_order = export_options['sort']
+                page_breaks = export_options['page_breaks']
+
+                # Sort calculations based on user choice
+                if sort_order == "drug_name":
+                    selected_calcs.sort(key=lambda x: x["drug_name"].lower())
+                elif sort_order == "date":
+                    selected_calcs.sort(key=lambda x: x["timestamp"])
+                elif sort_order == "type":
+                    # Stock first, then working
+                    selected_calcs.sort(key=lambda x: (0 if x["calculation_type"] == "Stock from Powder" else 1, x["drug_name"].lower()))
+                # else: keep table order (already sorted by selection)
 
             # Generate default filename
             date_str = datetime.now().strftime("%Y-%m-%d")
@@ -1452,13 +1695,13 @@ class DrugCalculatorApp:
 
             # Export PDF
             filepath = Path(filepath)
-            self.pdf_exporter.export_multiple_calculations(selected_calcs, filepath)
+            self.pdf_exporter.export_multiple_calculations(selected_calcs, filepath, page_breaks=page_breaks)
 
             # Auto-open PDF
             self.pdf_exporter.open_pdf(filepath)
 
             count_text = "calculation" if len(selected_calcs) == 1 else f"{len(selected_calcs)} calculations"
-            messagebox.showinfo(
+            self._show_success_dialog(
                 "PDF Exported",
                 f"Successfully exported {count_text} to:\n{filepath.name}\n\nThe PDF has been opened."
             )
