@@ -214,6 +214,8 @@ class AboutDialog:
             border_color=BORDER,
         ).pack(pady=20)
 
+        # Force layout calculation before centering
+        self.dialog.update_idletasks()
         center_window(self.dialog, parent)
 
     @staticmethod

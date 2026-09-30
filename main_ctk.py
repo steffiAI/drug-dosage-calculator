@@ -1,7 +1,7 @@
 """
 Drug Dosage Calculator - Main GUI Application (CustomTkinter migration).
 
-Version: v3.0.0.
+Version: v3.1.0.
 
 """
 
@@ -41,7 +41,7 @@ MUTED = "#9AA0A6"
 INSET_TEXT = "#B9BEC3"
 FOOTER_COLOR = "#7D8287"
 
-APP_VERSION = "v3.0.0"
+APP_VERSION = "v3.1.0"
 COLUMN_WIDTH = 640
 
 HISTORY_COLUMN_LABELS = {

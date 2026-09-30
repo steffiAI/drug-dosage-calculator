@@ -1,6 +1,6 @@
 # Drug Concentration Calculator
 
-Desktop app for lab drug solution and dilution calculations (Python, CustomTkinter, v3.0.0).
+Desktop app for lab drug solution and dilution calculations (Python, CustomTkinter, v3.1.0).
 
 ## Workflow
 - Working copy on branch `claude/work`. The real repo is elsewhere.
