@@ -1132,7 +1132,7 @@ class DrugCalculatorApp:
         columns = ("#", "Date", "Drug", "Type", "Value", "Solvent")
         self.history_tree = ttk.Treeview(
             tree_frame, columns=columns, show="headings", yscrollcommand=tree_scroll.set,
-            selectmode="browse", style="Dark.Treeview",
+            selectmode="extended", style="Dark.Treeview",
         )
         tree_scroll.config(command=self.history_tree.yview)
 
@@ -1159,13 +1159,17 @@ class DrugCalculatorApp:
             fg_color=ACCENT, hover_color="#4A9FD6", text_color="#0F1C24", font=self.button_font, width=120,
         ).grid(row=0, column=0, padx=6)
         ctk.CTkButton(
+            btn_frame, text="Export Selected", command=self.export_selected_to_pdf,
+            fg_color=ACCENT, hover_color="#4A9FD6", text_color="#0F1C24", font=self.button_font, width=140,
+        ).grid(row=0, column=1, padx=6)
+        ctk.CTkButton(
             btn_frame, text="Clear History", command=self.clear_history,
             fg_color=ROW, hover_color=ROW_HOVER, text_color=TEXT, font=self.button_font, width=120,
-        ).grid(row=0, column=1, padx=6)
+        ).grid(row=0, column=2, padx=6)
         ctk.CTkButton(
             btn_frame, text="Back to Menu", command=self.show_welcome_screen,
             fg_color=ROW, hover_color=ROW_HOVER, text_color=TEXT, font=self.button_font, width=120,
-        ).grid(row=0, column=2, padx=6)
+        ).grid(row=0, column=3, padx=6)
 
         ctk.CTkLabel(
             self.main_frame, text=f"{APP_VERSION} \u00b7 S. Strasser", font=self.footer_font, text_color=FOOTER_COLOR
@@ -1410,6 +1414,56 @@ class DrugCalculatorApp:
 
         win.wait_window()
         return result["confirmed"]
+
+    def export_selected_to_pdf(self) -> None:
+        """Export selected calculations to a single PDF."""
+        selection = self.history_tree.selection()
+        if not selection:
+            messagebox.showwarning("No Selection", "Please select one or more calculations to export.\n\nTip: Hold Ctrl to select multiple, or Shift to select a range.")
+            return
+
+        try:
+            # Get selected calculations
+            selected_calcs = []
+            for item in selection:
+                display_num = int(self.history_tree.item(item)["values"][0])
+                calc = self._get_sorted_filtered_calculations()[display_num - 1]
+                selected_calcs.append(calc)
+
+            # Generate default filename
+            date_str = datetime.now().strftime("%Y-%m-%d")
+            if len(selected_calcs) == 1:
+                safe_name = "".join(c if c.isalnum() or c in (' ', '-', '_') else '_' for c in selected_calcs[0]["drug_name"])
+                default_filename = f"{date_str}_{safe_name}_{selected_calcs[0]['calculation_type'].replace(' ', '_')}.pdf"
+            else:
+                default_filename = f"{date_str}_Multiple_Calculations_{len(selected_calcs)}_protocols.pdf"
+
+            # Show save file dialog
+            filepath = filedialog.asksaveasfilename(
+                parent=self.root,
+                title="Save PDF Protocol",
+                defaultextension=".pdf",
+                filetypes=[("PDF files", "*.pdf"), ("All files", "*.*")],
+                initialfile=default_filename,
+            )
+
+            if not filepath:  # User cancelled
+                return
+
+            # Export PDF
+            filepath = Path(filepath)
+            self.pdf_exporter.export_multiple_calculations(selected_calcs, filepath)
+
+            # Auto-open PDF
+            self.pdf_exporter.open_pdf(filepath)
+
+            count_text = "calculation" if len(selected_calcs) == 1 else f"{len(selected_calcs)} calculations"
+            messagebox.showinfo(
+                "PDF Exported",
+                f"Successfully exported {count_text} to:\n{filepath.name}\n\nThe PDF has been opened."
+            )
+        except Exception as e:
+            messagebox.showerror("Export Error", f"Failed to export PDF:\n{str(e)}")
 
     def clear_history(self) -> None:
         """Delete all calculation history, after confirmation."""

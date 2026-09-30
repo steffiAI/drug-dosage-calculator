@@ -99,6 +99,7 @@ class AboutDialog:
     def __init__(self, parent, font_manager: FontManager) -> None:
         self.dialog = ctk.CTkToplevel(parent)
         self.dialog.title("About")
+        self.dialog.geometry("500x580")
         self.dialog.configure(fg_color=BG)
         self.dialog.resizable(False, False)
 
@@ -213,9 +214,9 @@ class AboutDialog:
             border_color=BORDER,
         ).pack(pady=20)
 
-        # Force layout calculation before centering
+        # Center window after everything is laid out
         self.dialog.update_idletasks()
-        center_window(self.dialog, parent)
+        self.dialog.after(10, lambda: center_window(self.dialog, parent))
 
     @staticmethod
     def _separator(parent: ctk.CTkFrame) -> None:

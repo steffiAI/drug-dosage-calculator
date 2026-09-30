@@ -308,6 +308,184 @@ class PDFExporter:
         ]))
         story.append(protocol_table)
 
+    def export_multiple_calculations(self, calculations: list, filepath: Path) -> Path:
+        """
+        Export multiple calculations to a single PDF.
+
+        Parameters
+        ----------
+        calculations : list of dict
+            List of calculation records from history.
+        filepath : Path
+            Path for the output PDF file.
+
+        Returns
+        -------
+        Path
+            Path to the generated PDF file.
+        """
+        # Create PDF
+        doc = SimpleDocTemplate(
+            str(filepath),
+            pagesize=letter,
+            rightMargin=0.75*inch,
+            leftMargin=0.75*inch,
+            topMargin=0.75*inch,
+            bottomMargin=0.75*inch,
+        )
+
+        story = []
+        styles = getSampleStyleSheet()
+
+        # Styles
+        header_style = ParagraphStyle(
+            'Header',
+            parent=styles['Normal'],
+            fontSize=9,
+            textColor=colors.HexColor('#666666'),
+        )
+
+        title_style = ParagraphStyle(
+            'Title',
+            parent=styles['Heading1'],
+            fontSize=18,
+            textColor=colors.black,
+            spaceAfter=6,
+            spaceBefore=6,
+        )
+
+        protocol_title_style = ParagraphStyle(
+            'ProtocolTitle',
+            parent=styles['Heading2'],
+            fontSize=14,
+            textColor=colors.black,
+            spaceAfter=6,
+            spaceBefore=16,
+        )
+
+        subtitle_style = ParagraphStyle(
+            'Subtitle',
+            parent=styles['Normal'],
+            fontSize=11,
+            textColor=colors.HexColor('#333333'),
+            spaceAfter=16,
+        )
+
+        section_style = ParagraphStyle(
+            'Section',
+            parent=styles['Heading2'],
+            fontSize=11,
+            textColor=colors.black,
+            spaceAfter=8,
+            spaceBefore=12,
+        )
+
+        body_style = ParagraphStyle(
+            'Body',
+            parent=styles['Normal'],
+            fontSize=10,
+            textColor=colors.black,
+        )
+
+        footer_style = ParagraphStyle(
+            'Footer',
+            parent=styles['Normal'],
+            fontSize=8,
+            textColor=colors.HexColor('#999999'),
+        )
+
+        # Top header
+        date_str = datetime.now().strftime("%Y-%m-%d")
+        header_data = [[
+            Paragraph("Drug Concentration Calculator", header_style),
+            Paragraph(f"Date: {date_str}", header_style),
+        ]]
+        header_table = Table(header_data, colWidths=[4.5*inch, 2*inch])
+        header_table.setStyle(TableStyle([
+            ('ALIGN', (0, 0), (0, 0), 'LEFT'),
+            ('ALIGN', (1, 0), (1, 0), 'RIGHT'),
+            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+        ]))
+        story.append(header_table)
+        story.append(Spacer(1, 0.1*inch))
+
+        # Separator line
+        line_table = Table([['']], colWidths=[6.5*inch])
+        line_table.setStyle(TableStyle([
+            ('LINEABOVE', (0, 0), (-1, 0), 0.5, colors.HexColor('#CCCCCC')),
+        ]))
+        story.append(line_table)
+        story.append(Spacer(1, 0.2*inch))
+
+        # Main title
+        story.append(Paragraph(f"PREPARATION PROTOCOLS ({len(calculations)} Calculations)", title_style))
+        story.append(Spacer(1, 0.2*inch))
+
+        # Add each calculation
+        for idx, calc in enumerate(calculations, 1):
+            calc_type = calc["calculation_type"]
+            drug_name = calc["drug_name"]
+            inputs = calc["inputs"]
+            results = calc["results"]
+            solvent = calc.get("solvent", "Not specified")
+
+            # Protocol number and title
+            if calc_type == "Stock from Powder":
+                protocol_title = f"Protocol {idx}: Stock Solution - {drug_name}"
+            else:
+                protocol_title = f"Protocol {idx}: Working Solution - {drug_name}"
+
+            story.append(Paragraph(protocol_title, protocol_title_style))
+
+            # Information
+            story.append(Paragraph("COMPOUND INFORMATION", section_style))
+
+            if calc_type == "Stock from Powder":
+                self._add_stock_info(story, inputs, solvent, body_style)
+            else:
+                self._add_dilution_info(story, inputs, results, solvent, body_style)
+
+            story.append(Spacer(1, 0.1*inch))
+
+            # Protocol steps
+            story.append(Paragraph("PREPARATION PROTOCOL", section_style))
+
+            if calc_type == "Stock from Powder":
+                self._add_stock_protocol(story, inputs, results, solvent, body_style)
+            else:
+                self._add_dilution_protocol(story, inputs, results, solvent, body_style)
+
+            # Add separator between protocols (except after the last one)
+            if idx < len(calculations):
+                story.append(Spacer(1, 0.3*inch))
+                separator = Table([['']], colWidths=[6.5*inch])
+                separator.setStyle(TableStyle([
+                    ('LINEABOVE', (0, 0), (-1, 0), 0.5, colors.HexColor('#EEEEEE')),
+                ]))
+                story.append(separator)
+
+        # Footer
+        story.append(Spacer(1, 0.4*inch))
+        line_table2 = Table([['']], colWidths=[6.5*inch])
+        line_table2.setStyle(TableStyle([
+            ('LINEABOVE', (0, 0), (-1, 0), 0.5, colors.HexColor('#CCCCCC')),
+        ]))
+        story.append(line_table2)
+        story.append(Spacer(1, 0.1*inch))
+
+        story.append(Paragraph(
+            "Generated by Drug Concentration Calculator v3.1.0",
+            footer_style
+        ))
+        story.append(Paragraph(
+            "github.com/steffiAI/drug-dosage-calculator",
+            footer_style
+        ))
+
+        # Build PDF
+        doc.build(story)
+        return filepath
+
     def open_pdf(self, filepath: Path) -> None:
         """
         Open a PDF file with the system default viewer.
