@@ -5,6 +5,75 @@ All notable changes to the Drug Dosage Calculator will be documented in this fil
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.2.0] - 2025-09-30
+
+### Added
+- **PDF Export System**: Professional print-optimized protocol export
+  - Clean minimal design with white background for efficient printing
+  - Multi-select export with checkboxes in history table
+  - Customizable export options dialog (sort order, page breaks)
+  - File save dialog with editable default filenames
+  - Auto-open PDF after generation
+  - Footer with version number and GitHub link
+- **Multi-Select Calculation Export**
+  - Checkbox column in history table for selection
+  - "Select All" / "Deselect All" buttons
+  - Live selection counter display
+  - Export single or multiple calculations as one PDF
+  - Sort options: table order, by drug name, by date, by type
+  - Optional page breaks between protocols
+- **Adjustable Font Scaling**
+  - User-configurable font size slider (100%-150%)
+  - 10% increments for smooth adjustment
+  - Default set to 120% for improved readability
+  - Persistent preference storage
+  - All UI elements scale including tooltips and history table
+  - Centralized font management system
+- **Dark Mode Consistency**
+  - Custom dark-themed success dialog (replaces Windows messageboxes)
+  - All dialogs follow dark theme (export options, confirmations)
+  - Consistent color palette throughout application
+
+### Changed
+- **About Dialog**: Now properly centers on screen with explicit sizing
+- **History Table**: Added checkbox column as first column
+- **User Preferences**: Now stored in `data/user_preferences.json`
+- **Export Options**: Separate dialog for multi-calculation export settings
+
+### Fixed
+- About dialog centering issues on all screen sizes
+- Checkbox column only responds to clicks in first column (not entire row)
+- Double-click functionality preserved for viewing calculation details
+- Column indices updated to account for checkbox column
+- Export dialogs properly sized to prevent button cutoff
+
+### Technical
+- New module: `src/font_manager.py` - Centralized font scaling
+- New module: `src/pdf_export.py` - PDF generation with reportlab
+- Added reportlab dependency for PDF generation
+- Updated PyInstaller spec with new hidden imports
+- Enhanced data storage with user preferences support
+
+## [3.1.0] - 2025-09-30
+
+### Added
+- Adjustable font scaling with slider control
+- User preference persistence
+- Centered main window content
+
+### Changed
+- Default font scale increased to 120%
+- About dialog updated with version number
+
+## [3.0.0] - 2025-09-30
+
+### Changed
+- **Complete UI Migration to CustomTkinter**
+  - Modern dark-themed interface
+  - Improved visual consistency
+  - Better cross-platform appearance
+  - Professional design aesthetic
+
 ## [1.2.0] - 2025-11-21
 
 ### Added
@@ -154,25 +223,17 @@ We use Semantic Versioning:
 - **MINOR** version (0.X.0): New functionality (backwards-compatible)
 - **PATCH** version (0.0.X): Bug fixes (backwards-compatible)
 
-Current: v1.2.0
+Current: v3.2.0
 
 ---
 
 ## Upcoming Features (Planned)
 
-### Phase 2
-- [ ] Enhanced history viewer with compact layout
-- [ ] PDF export with formatted protocols
-- [ ] Selection and batch export from history
 - [ ] Serial dilution calculator
-- [ ] Improved unit handling and conversion display
-
-### Phase 3
-- [ ] PubChem API integration for automatic MW lookup
-- [ ] Drug identifiers support (CAS number, Catalog #, RRID)
-- [ ] Custom drug database
+- [ ] Additional drug identifiers support (Catalog #, RRID)
+- [ ] Custom drug database expansion
 - [ ] Aliquot calculator
-- [ ] Interactive calculation history with filtering
+- [ ] Batch calculation templates
 
 ---
 
