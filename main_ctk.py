@@ -628,18 +628,33 @@ class DrugCalculatorApp:
 
             confirm = ctk.CTkToplevel(win)
             confirm.title("Copied")
-            confirm.geometry("300x150")
+            confirm.geometry("350x180")
             confirm.configure(fg_color=BG)
             confirm.transient(win)
             confirm.grab_set()
+
+            try:
+                icon_path = _asset_path("icon.ico")
+                if icon_path.exists():
+                    confirm.iconbitmap(str(icon_path))
+            except Exception:
+                pass
             apply_dark_titlebar(confirm)
 
             ctk.CTkLabel(
                 confirm,
-                text="Protocol copied to clipboard!",
-                font=ctk.CTkFont(size=14),
+                text="Copied",
+                font=self.form_title_font,
                 text_color=TEXT
-            ).pack(pady=30, padx=20)
+            ).pack(pady=(15, 10))
+
+            ctk.CTkLabel(
+                confirm,
+                text="Protocol copied to clipboard!",
+                font=ctk.CTkFont(size=13),
+                text_color=TEXT,
+                wraplength=300
+            ).pack(pady=(0, 20), padx=20)
 
             ctk.CTkButton(
                 confirm,
