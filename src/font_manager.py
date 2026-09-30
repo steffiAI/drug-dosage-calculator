@@ -25,6 +25,7 @@ class FontManager:
         'form_title': 24,
         'row_title': 18,
         'history_title': 17,
+        'tooltip': 16,
         'button': 16,
         'about': 15,
         'body': 14,

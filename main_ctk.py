@@ -77,11 +77,14 @@ class CTkToolTip:
         Widget to attach the tooltip to (e.g. an info-icon label).
     text : str
         Text to display on hover.
+    font_manager : FontManager
+        Font manager for scaled tooltip font.
     """
 
-    def __init__(self, widget, text: str) -> None:
+    def __init__(self, widget, text: str, font_manager) -> None:
         self.widget = widget
         self.text = text
+        self.font_manager = font_manager
         self.tip: Optional[tk.Toplevel] = None
         widget.bind("<Enter>", self.show)
         widget.bind("<Leave>", self.hide)
@@ -95,8 +98,9 @@ class CTkToolTip:
         self.tip = tk.Toplevel(self.widget)
         self.tip.wm_overrideredirect(True)
         self.tip.wm_geometry(f"+{x}+{y}")
+        tooltip_font = self.font_manager.get_font('tooltip')
         tk.Label(
-            self.tip, text=self.text, bg=CARD, fg=TEXT, font=("Segoe UI", 14),
+            self.tip, text=self.text, bg=CARD, fg=TEXT, font=(tooltip_font.cget("family"), tooltip_font.cget("size")),
             relief="solid", borderwidth=1, highlightbackground=BORDER, padx=6, pady=3,
         ).pack()
 
@@ -300,8 +304,11 @@ class DrugCalculatorApp:
             font=self.about_font,
         ).pack(side="left", padx=20)
 
+        content = ctk.CTkFrame(self.main_frame, fg_color="transparent")
+        content.pack(expand=True)
+
         ctk.CTkLabel(
-            self.main_frame,
+            content,
             text="Drug Concentration Calculator",
             font=self.h1_font,
             text_color=TEXT,
@@ -310,9 +317,9 @@ class DrugCalculatorApp:
         hero_img = Image.open(_asset_path("pill3.png"))
         hero = ctk.CTkImage(light_image=hero_img, dark_image=hero_img, size=(84, 84))
         self._icon_refs.append(hero)
-        ctk.CTkLabel(self.main_frame, image=hero, text="").pack(pady=(12, 20))
+        ctk.CTkLabel(content, image=hero, text="").pack(pady=(12, 20))
 
-        col = ctk.CTkFrame(self.main_frame, fg_color="transparent", width=COLUMN_WIDTH)
+        col = ctk.CTkFrame(content, fg_color="transparent", width=COLUMN_WIDTH)
         col.pack()
 
         self._calculator_row(
@@ -332,7 +339,7 @@ class DrugCalculatorApp:
         self._history_card(col)
 
         ctk.CTkLabel(
-            self.main_frame,
+            content,
             text=f"{APP_VERSION} \u00b7 S. Strasser",
             font=self.footer_font,
             text_color=FOOTER_COLOR,
@@ -566,7 +573,7 @@ class DrugCalculatorApp:
                 label_frame, text=" \u24d8", font=self.form_label_font, text_color=ACCENT, cursor="hand2"
             )
             info_icon.pack(side="left")
-            CTkToolTip(info_icon, tooltip)
+            CTkToolTip(info_icon, tooltip, self.font_manager)
 
         if is_solvent:
             ctk.CTkComboBox(
