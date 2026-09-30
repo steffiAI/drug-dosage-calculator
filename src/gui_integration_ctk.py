@@ -158,22 +158,15 @@ class AboutDialog:
             text="Stefanie Strasser",
             font=font_manager.get_font('body', weight='bold'),
             text_color=ACCENT,
-        ).pack(pady=(5, 3))
+        ).pack(pady=(5, 15))
 
-        ctk.CTkLabel(
-            info_frame,
-            text="s.strasser387@gmail.com",
-            font=font_manager.get_font('small'),
-            text_color=MUTED,
-        ).pack(pady=(0, 15))
-
-        # GitHub link (text only, same as original - no webbrowser call)
+        # GitHub and feedback
         ctk.CTkLabel(
             info_frame,
             text="GitHub Repository:",
             font=font_manager.get_font('small'),
             text_color=MUTED,
-        ).pack(pady=(10, 3))
+        ).pack(pady=(0, 3))
 
         ctk.CTkLabel(
             info_frame,
@@ -181,6 +174,13 @@ class AboutDialog:
             font=font_manager.get_font('small', weight='bold'),
             text_color=ACCENT,
         ).pack()
+
+        ctk.CTkLabel(
+            info_frame,
+            text="Report issues or suggest features via GitHub",
+            font=font_manager.get_font('small'),
+            text_color=MUTED,
+        ).pack(pady=(8, 0))
 
         self._separator(info_frame)
 
@@ -214,7 +214,7 @@ class AboutDialog:
             border_color=BORDER,
         ).pack(pady=20)
 
-        center_window(self.dialog)
+        center_window(self.dialog, parent)
 
     @staticmethod
     def _separator(parent: ctk.CTkFrame) -> None:
