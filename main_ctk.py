@@ -249,12 +249,16 @@ class DrugCalculatorApp:
         self._icon_refs.append(ctk_img)
         return ctk_img
 
-    def _toggle_font_scale(self) -> None:
-        """Toggle between normal and larger fonts, saving the preference."""
-        new_scale = 1.15 if self.larger_fonts_var.get() == 1 else 1.0
+    def _on_font_scale_change(self, value) -> None:
+        """Handle font scale slider changes, saving the preference and updating UI."""
+        new_scale = float(value)
         self.preferences.set_font_scale(new_scale)
         self.font_manager.set_user_scale(new_scale)
         self._setup_fonts()
+
+        # Update percentage label
+        if hasattr(self, 'font_scale_label'):
+            self.font_scale_label.configure(text=f"{int(new_scale * 100)}%")
 
         current_screen = self.current_mode
         if current_screen == "stock":
@@ -292,17 +296,36 @@ class DrugCalculatorApp:
             command=self.show_about_dialog,
         ).pack(side="left")
 
-        self.larger_fonts_var = tk.IntVar(value=1 if self.preferences.get_font_scale() > 1.0 else 0)
-        ctk.CTkCheckBox(
+        ctk.CTkLabel(
             top_bar,
-            text="Larger fonts",
-            variable=self.larger_fonts_var,
-            command=self._toggle_font_scale,
-            fg_color=ACCENT,
-            hover_color="#4A9FD6",
+            text="Font size:",
             text_color=MUTED,
             font=self.about_font,
-        ).pack(side="left", padx=20)
+        ).pack(side="left", padx=(20, 8))
+
+        self.font_scale_var = tk.DoubleVar(value=self.preferences.get_font_scale())
+        ctk.CTkSlider(
+            top_bar,
+            from_=1.0,
+            to=1.5,
+            variable=self.font_scale_var,
+            command=self._on_font_scale_change,
+            width=120,
+            height=16,
+            fg_color=ROW,
+            progress_color=ACCENT,
+            button_color=ACCENT,
+            button_hover_color="#4A9FD6",
+        ).pack(side="left", padx=(0, 8))
+
+        self.font_scale_label = ctk.CTkLabel(
+            top_bar,
+            text=f"{int(self.font_scale_var.get() * 100)}%",
+            text_color=MUTED,
+            font=self.about_font,
+            width=45,
+        )
+        self.font_scale_label.pack(side="left")
 
         content = ctk.CTkFrame(self.main_frame, fg_color="transparent")
         content.pack(expand=True)

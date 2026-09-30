@@ -167,7 +167,7 @@ class UserPreferences:
         self.prefs_file = self.data_dir / "user_preferences.json"
 
         if not self.prefs_file.exists():
-            self._save_preferences({'font_scale': 1.0})
+            self._save_preferences({'font_scale': 1.15})
 
     def _save_preferences(self, prefs: Dict[str, Any]) -> None:
         """
