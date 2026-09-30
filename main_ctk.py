@@ -625,7 +625,31 @@ class DrugCalculatorApp:
         def copy_to_clipboard() -> None:
             win.clipboard_clear()
             win.clipboard_append(content)
-            messagebox.showinfo("Copied", "Protocol copied to clipboard!", parent=win)
+
+            confirm = ctk.CTkToplevel(win)
+            confirm.title("Copied")
+            confirm.geometry("300x150")
+            confirm.configure(fg_color=BG)
+            confirm.transient(win)
+            confirm.grab_set()
+            apply_dark_titlebar(confirm)
+
+            ctk.CTkLabel(
+                confirm,
+                text="Protocol copied to clipboard!",
+                font=ctk.CTkFont(size=14),
+                text_color=TEXT
+            ).pack(pady=30, padx=20)
+
+            ctk.CTkButton(
+                confirm,
+                text="OK",
+                command=confirm.destroy,
+                fg_color=ROW,
+                hover_color=ROW_HOVER,
+                text_color=TEXT,
+                width=100
+            ).pack(pady=(0, 20))
 
         btn_frame = ctk.CTkFrame(win, fg_color="transparent")
         btn_frame.pack(pady=(0, 15))
