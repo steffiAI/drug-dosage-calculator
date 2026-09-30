@@ -9,8 +9,9 @@ import sys
 import ctypes
 import tkinter as tk
 from pathlib import Path
-from tkinter import messagebox, ttk, StringVar
+from tkinter import messagebox, ttk, StringVar, filedialog
 from typing import Optional
+from datetime import datetime
 
 import customtkinter as ctk
 from PIL import Image
@@ -710,6 +711,7 @@ class DrugCalculatorApp:
         """
         win = ctk.CTkToplevel(self.root)
         win.title(f"{title} - {drug_name}")
+        win.geometry("650x550")
         win.configure(fg_color=BG)
         win.transient(self.root)
 
@@ -767,14 +769,38 @@ class DrugCalculatorApp:
                 return
 
             try:
-                filepath = self.pdf_exporter.export_calculation(
+                # Generate default filename
+                date_str = datetime.now().strftime("%Y-%m-%d")
+                safe_name = "".join(c if c.isalnum() or c in (' ', '-', '_') else '_' for c in drug_name)
+                default_filename = f"{date_str}_{safe_name}_{calc_data['type'].replace(' ', '_')}.pdf"
+
+                # Show save file dialog
+                filepath = filedialog.asksaveasfilename(
+                    parent=win,
+                    title="Save PDF Protocol",
+                    defaultextension=".pdf",
+                    filetypes=[("PDF files", "*.pdf"), ("All files", "*.*")],
+                    initialfile=default_filename,
+                )
+
+                if not filepath:  # User cancelled
+                    return
+
+                # Export PDF
+                filepath = Path(filepath)
+                self.pdf_exporter.export_calculation(
                     calculation_type=calc_data['type'],
                     drug_name=drug_name,
                     inputs=calc_data['inputs'],
                     results=calc_data['results'],
                     solvent=calc_data.get('solvent', ''),
+                    filepath=filepath,
                 )
-                self._show_toast(win, f"PDF saved to:\n{filepath.name}", SUCCESS, width=400)
+
+                # Auto-open PDF
+                self.pdf_exporter.open_pdf(filepath)
+
+                self._show_toast(win, f"PDF saved and opened:\n{filepath.name}", SUCCESS, width=400)
             except Exception as e:
                 messagebox.showerror("Export Error", f"Failed to export PDF:\n{str(e)}")
 

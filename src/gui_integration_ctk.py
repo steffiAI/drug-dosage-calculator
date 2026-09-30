@@ -116,9 +116,8 @@ class AboutDialog:
         apply_dark_titlebar(self.dialog)
         self.dialog.focus_set()
 
-        info_frame = ctk.CTkFrame(self.dialog, fg_color="transparent", width=450)
+        info_frame = ctk.CTkFrame(self.dialog, fg_color="transparent")
         info_frame.pack(fill="both", expand=True, padx=25, pady=20)
-        info_frame.pack_propagate(True)
 
         # Title
         ctk.CTkLabel(

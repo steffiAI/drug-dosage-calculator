@@ -1,9 +1,12 @@
 """
 PDF Export Module for Drug Concentration Calculator.
 
-Generates professional PDF reports for calculation protocols.
+Generates clean, print-optimized PDF reports for calculation protocols.
 """
 
+import os
+import platform
+import subprocess
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
@@ -11,14 +14,14 @@ from typing import Optional
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.units import inch
 from reportlab.lib import colors
-from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, HRFlowable
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.lib.enums import TA_CENTER, TA_LEFT
+from reportlab.lib.enums import TA_LEFT, TA_RIGHT
 
 
 class PDFExporter:
     """
-    Generate professional PDF reports for calculation protocols.
+    Generate clean, print-optimized PDF reports for calculation protocols.
 
     Parameters
     ----------
@@ -37,7 +40,8 @@ class PDFExporter:
         inputs: dict,
         results: dict,
         solvent: str = "",
-        timestamp: Optional[str] = None
+        timestamp: Optional[str] = None,
+        filepath: Optional[Path] = None
     ) -> Path:
         """
         Export a single calculation to PDF.
@@ -56,18 +60,21 @@ class PDFExporter:
             Solvent used
         timestamp : str, optional
             Calculation timestamp
+        filepath : Path, optional
+            Custom filepath for the PDF. If None, a default name is generated.
 
         Returns
         -------
         Path
             Path to the generated PDF file
         """
-        # Generate filename
-        timestamp_str = timestamp or datetime.now().isoformat()
-        date_str = timestamp_str.split('T')[0]
-        safe_name = "".join(c if c.isalnum() or c in (' ', '-', '_') else '_' for c in drug_name)
-        filename = f"{date_str}_{safe_name}_{calculation_type.replace(' ', '_')}.pdf"
-        filepath = self.output_dir / filename
+        # Use custom filepath or generate default
+        if filepath is None:
+            timestamp_str = timestamp or datetime.now().isoformat()
+            date_str = timestamp_str.split('T')[0]
+            safe_name = "".join(c if c.isalnum() or c in (' ', '-', '_') else '_' for c in drug_name)
+            filename = f"{date_str}_{safe_name}_{calculation_type.replace(' ', '_')}.pdf"
+            filepath = self.output_dir / filename
 
         # Create PDF
         doc = SimpleDocTemplate(
@@ -84,83 +91,118 @@ class PDFExporter:
         styles = getSampleStyleSheet()
 
         # Custom styles
+        header_style = ParagraphStyle(
+            'Header',
+            parent=styles['Normal'],
+            fontSize=9,
+            textColor=colors.HexColor('#666666'),
+        )
+
         title_style = ParagraphStyle(
-            'CustomTitle',
+            'Title',
             parent=styles['Heading1'],
-            fontSize=24,
-            textColor=colors.HexColor('#5CB8EC'),
+            fontSize=18,
+            textColor=colors.black,
             spaceAfter=6,
-            alignment=TA_CENTER,
+            spaceBefore=6,
         )
 
         subtitle_style = ParagraphStyle(
-            'CustomSubtitle',
+            'Subtitle',
             parent=styles['Normal'],
-            fontSize=12,
-            textColor=colors.HexColor('#9AA0A6'),
-            spaceAfter=20,
-            alignment=TA_CENTER,
+            fontSize=11,
+            textColor=colors.HexColor('#333333'),
+            spaceAfter=16,
         )
 
-        header_style = ParagraphStyle(
-            'CustomHeader',
+        section_style = ParagraphStyle(
+            'Section',
             parent=styles['Heading2'],
-            fontSize=14,
-            textColor=colors.HexColor('#5CB8EC'),
-            spaceAfter=10,
-            spaceBefore=10,
+            fontSize=11,
+            textColor=colors.black,
+            spaceAfter=8,
+            spaceBefore=12,
         )
 
-        # Header
-        story.append(Paragraph("Drug Concentration Calculator", title_style))
-        story.append(Paragraph(calculation_type, subtitle_style))
-        story.append(Spacer(1, 0.2*inch))
-
-        # Drug info section
-        story.append(Paragraph("Compound Information", header_style))
-
-        drug_data = [
-            ["Drug Name:", drug_name],
-            ["Date:", date_str],
-            ["Solvent:", solvent or "Not specified"],
-        ]
-
-        drug_table = Table(drug_data, colWidths=[2*inch, 4.5*inch])
-        drug_table.setStyle(TableStyle([
-            ('FONT', (0, 0), (0, -1), 'Helvetica-Bold', 11),
-            ('FONT', (1, 0), (1, -1), 'Helvetica', 11),
-            ('TEXTCOLOR', (0, 0), (0, -1), colors.HexColor('#9AA0A6')),
-            ('TEXTCOLOR', (1, 0), (1, -1), colors.HexColor('#FFFFFF')),
-            ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#2F2F2F')),
-            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-            ('TOPPADDING', (0, 0), (-1, -1), 8),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
-            ('LEFTPADDING', (0, 0), (-1, -1), 12),
-        ]))
-        story.append(drug_table)
-        story.append(Spacer(1, 0.3*inch))
-
-        # Parameters and protocol sections based on type
-        if calculation_type == "Stock from Powder":
-            self._add_stock_protocol(story, inputs, results, header_style)
-        else:
-            self._add_dilution_protocol(story, inputs, results, header_style)
-
-        # Footer
-        story.append(Spacer(1, 0.4*inch))
-        story.append(HRFlowable(width="100%", thickness=1, color=colors.HexColor('#2A2A2A')))
-        story.append(Spacer(1, 0.1*inch))
+        body_style = ParagraphStyle(
+            'Body',
+            parent=styles['Normal'],
+            fontSize=10,
+            textColor=colors.black,
+        )
 
         footer_style = ParagraphStyle(
             'Footer',
             parent=styles['Normal'],
-            fontSize=9,
-            textColor=colors.HexColor('#7D8287'),
-            alignment=TA_CENTER,
+            fontSize=8,
+            textColor=colors.HexColor('#999999'),
         )
+
+        # Top header line
+        timestamp_str = timestamp or datetime.now().isoformat()
+        date_str = timestamp_str.split('T')[0]
+
+        header_data = [[
+            Paragraph("Drug Concentration Calculator", header_style),
+            Paragraph(f"Date: {date_str}", header_style),
+        ]]
+        header_table = Table(header_data, colWidths=[4.5*inch, 2*inch])
+        header_table.setStyle(TableStyle([
+            ('ALIGN', (0, 0), (0, 0), 'LEFT'),
+            ('ALIGN', (1, 0), (1, 0), 'RIGHT'),
+            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+        ]))
+        story.append(header_table)
+        story.append(Spacer(1, 0.1*inch))
+
+        # Separator line
+        line_table = Table([['']], colWidths=[6.5*inch])
+        line_table.setStyle(TableStyle([
+            ('LINEABOVE', (0, 0), (-1, 0), 0.5, colors.HexColor('#CCCCCC')),
+        ]))
+        story.append(line_table)
+        story.append(Spacer(1, 0.2*inch))
+
+        # Title
+        if calculation_type == "Stock from Powder":
+            story.append(Paragraph("STOCK SOLUTION PREPARATION PROTOCOL", title_style))
+        else:
+            story.append(Paragraph("WORKING SOLUTION PREPARATION PROTOCOL", title_style))
+
+        story.append(Paragraph(f"Drug: {drug_name}", subtitle_style))
+
+        # Compound information section
+        story.append(Paragraph("COMPOUND INFORMATION", section_style))
+
+        if calculation_type == "Stock from Powder":
+            self._add_stock_info(story, inputs, solvent, body_style)
+        else:
+            self._add_dilution_info(story, inputs, results, solvent, body_style)
+
+        story.append(Spacer(1, 0.1*inch))
+
+        # Preparation protocol section
+        story.append(Paragraph("PREPARATION PROTOCOL", section_style))
+
+        if calculation_type == "Stock from Powder":
+            self._add_stock_protocol(story, inputs, results, solvent, body_style)
+        else:
+            self._add_dilution_protocol(story, inputs, results, solvent, body_style)
+
+        # Footer
+        story.append(Spacer(1, 0.4*inch))
+        line_table2 = Table([['']], colWidths=[6.5*inch])
+        line_table2.setStyle(TableStyle([
+            ('LINEABOVE', (0, 0), (-1, 0), 0.5, colors.HexColor('#CCCCCC')),
+        ]))
+        story.append(line_table2)
+        story.append(Spacer(1, 0.1*inch))
+
         story.append(Paragraph(
-            "Generated by Drug Concentration Calculator v3.1.0 | "
+            "Generated by Drug Concentration Calculator v3.1.0",
+            footer_style
+        ))
+        story.append(Paragraph(
             "github.com/steffiAI/drug-dosage-calculator",
             footer_style
         ))
@@ -169,115 +211,118 @@ class PDFExporter:
         doc.build(story)
         return filepath
 
-    def _add_stock_protocol(self, story, inputs: dict, results: dict, header_style) -> None:
-        """Add stock solution protocol to PDF."""
+    def _add_stock_info(self, story, inputs: dict, solvent: str, body_style) -> None:
+        """Add stock solution compound information."""
+        from formatters import format_number
+
+        info_data = [
+            ["Molecular Weight", f"{format_number(inputs.get('molecular_weight', 0))} g/mol"],
+            ["Target Concentration",
+             f"{format_number(inputs.get('target_concentration', 0))} {inputs.get('concentration_unit', '?')}"],
+            ["Target Volume",
+             f"{format_number(inputs.get('target_volume', 0))} {inputs.get('volume_unit', '?')}"],
+            ["Solvent", solvent or "Not specified"],
+        ]
+
+        info_table = Table(info_data, colWidths=[2*inch, 4.5*inch])
+        info_table.setStyle(TableStyle([
+            ('FONT', (0, 0), (0, -1), 'Helvetica-Bold', 10),
+            ('FONT', (1, 0), (1, -1), 'Helvetica', 10),
+            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+            ('TOPPADDING', (0, 0), (-1, -1), 3),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
+        ]))
+        story.append(info_table)
+
+    def _add_dilution_info(self, story, inputs: dict, results: dict, solvent: str, body_style) -> None:
+        """Add dilution compound information."""
+        from formatters import format_number
+
+        info_data = [
+            ["Stock Concentration",
+             f"{format_number(inputs.get('stock_concentration', 0))} {inputs.get('stock_concentration_unit', '?')}"],
+            ["Target Concentration",
+             f"{format_number(inputs.get('target_concentration', 0))} {inputs.get('target_concentration_unit', '?')}"],
+            ["Target Volume",
+             f"{format_number(inputs.get('target_volume', 0))} {inputs.get('volume_unit', '?')}"],
+            ["Dilution Factor", f"{format_number(results.get('dilution_factor', 0))}x"],
+            ["Solvent", solvent or "Not specified"],
+        ]
+
+        info_table = Table(info_data, colWidths=[2*inch, 4.5*inch])
+        info_table.setStyle(TableStyle([
+            ('FONT', (0, 0), (0, -1), 'Helvetica-Bold', 10),
+            ('FONT', (1, 0), (1, -1), 'Helvetica', 10),
+            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+            ('TOPPADDING', (0, 0), (-1, -1), 3),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
+        ]))
+        story.append(info_table)
+
+    def _add_stock_protocol(self, story, inputs: dict, results: dict, solvent: str, body_style) -> None:
+        """Add stock solution preparation protocol."""
         from formatters import format_number, format_result_with_unit
 
-        # Parameters
-        story.append(Paragraph("Parameters", header_style))
-
-        params_data = [
-            ["Molecular Weight:", f"{format_number(inputs.get('molecular_weight', 0))} g/mol"],
-            ["Target Concentration:",
-             f"{format_number(inputs.get('target_concentration', 0))} {inputs.get('concentration_unit', '?')}"],
-            ["Target Volume:",
-             f"{format_number(inputs.get('target_volume', 0))} {inputs.get('volume_unit', '?')}"],
-        ]
-
-        params_table = Table(params_data, colWidths=[2*inch, 4.5*inch])
-        params_table.setStyle(self._get_table_style())
-        story.append(params_table)
-        story.append(Spacer(1, 0.3*inch))
-
-        # Protocol
-        story.append(Paragraph("Preparation Protocol", header_style))
-
         protocol_data = [
-            ["Step 1:", f"WEIGH {format_result_with_unit(results.get('mass_mg', 0), 'mg')} of compound"],
-            ["Step 2:",
-             f"DISSOLVE in {format_number(inputs.get('target_volume', 0))} "
-             f"{inputs.get('volume_unit', '?')} of solvent"],
+            [Paragraph("<b>1.</b>", body_style),
+             Paragraph(f"WEIGH {format_result_with_unit(results.get('mass_mg', 0), 'mg')} of compound", body_style)],
+            [Paragraph("<b>2.</b>", body_style),
+             Paragraph(f"DISSOLVE in {format_number(inputs.get('target_volume', 0))} "
+                      f"{inputs.get('volume_unit', '?')} {solvent or 'solvent'}", body_style)],
         ]
 
-        protocol_table = Table(protocol_data, colWidths=[1*inch, 5.5*inch])
+        protocol_table = Table(protocol_data, colWidths=[0.4*inch, 6.1*inch])
         protocol_table.setStyle(TableStyle([
-            ('FONT', (0, 0), (0, -1), 'Helvetica-Bold', 12),
-            ('FONT', (1, 0), (1, -1), 'Helvetica', 11),
-            ('TEXTCOLOR', (0, 0), (0, -1), colors.HexColor('#5CB8EC')),
-            ('TEXTCOLOR', (1, 0), (1, -1), colors.HexColor('#FFFFFF')),
-            ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#262626')),
-            ('ALIGN', (0, 0), (0, -1), 'CENTER'),
+            ('ALIGN', (0, 0), (0, -1), 'LEFT'),
             ('ALIGN', (1, 0), (1, -1), 'LEFT'),
-            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-            ('TOPPADDING', (0, 0), (-1, -1), 12),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 12),
-            ('LEFTPADDING', (0, 0), (-1, -1), 12),
-            ('GRID', (0, 0), (-1, -1), 1, colors.HexColor('#2A2A2A')),
+            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+            ('TOPPADDING', (0, 0), (-1, -1), 4),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
         ]))
         story.append(protocol_table)
 
-    def _add_dilution_protocol(self, story, inputs: dict, results: dict, header_style) -> None:
-        """Add dilution protocol to PDF."""
-        from formatters import format_number, format_result_with_unit, convert_to_readable_unit
-
-        # Parameters
-        story.append(Paragraph("Parameters", header_style))
-
-        params_data = [
-            ["Stock Concentration:",
-             f"{format_number(inputs.get('stock_concentration', 0))} {inputs.get('stock_concentration_unit', '?')}"],
-            ["Target Concentration:",
-             f"{format_number(inputs.get('target_concentration', 0))} {inputs.get('target_concentration_unit', '?')}"],
-            ["Target Volume:",
-             f"{format_number(inputs.get('target_volume', 0))} {inputs.get('volume_unit', '?')}"],
-            ["Dilution Factor:", f"{format_number(results.get('dilution_factor', 0))}x"],
-        ]
-
-        params_table = Table(params_data, colWidths=[2*inch, 4.5*inch])
-        params_table.setStyle(self._get_table_style())
-        story.append(params_table)
-        story.append(Spacer(1, 0.3*inch))
-
-        # Protocol
-        story.append(Paragraph("Dilution Protocol", header_style))
+    def _add_dilution_protocol(self, story, inputs: dict, results: dict, solvent: str, body_style) -> None:
+        """Add dilution preparation protocol."""
+        from formatters import format_result_with_unit, convert_to_readable_unit
 
         vol_unit = inputs.get('volume_unit', '?')
         stock_vol, stock_vol_unit = convert_to_readable_unit(results.get('stock_volume', 0), vol_unit)
         solvent_vol, solvent_vol_unit = convert_to_readable_unit(results.get('solvent_volume', 0), vol_unit)
 
         protocol_data = [
-            ["Step 1:", f"TAKE {format_result_with_unit(stock_vol, stock_vol_unit)} of stock solution"],
-            ["Step 2:", f"ADD {format_result_with_unit(solvent_vol, solvent_vol_unit)} of solvent"],
+            [Paragraph("<b>1.</b>", body_style),
+             Paragraph(f"TAKE {format_result_with_unit(stock_vol, stock_vol_unit)} of stock solution", body_style)],
+            [Paragraph("<b>2.</b>", body_style),
+             Paragraph(f"ADD {format_result_with_unit(solvent_vol, solvent_vol_unit)} of {solvent or 'solvent'}", body_style)],
         ]
 
-        protocol_table = Table(protocol_data, colWidths=[1*inch, 5.5*inch])
+        protocol_table = Table(protocol_data, colWidths=[0.4*inch, 6.1*inch])
         protocol_table.setStyle(TableStyle([
-            ('FONT', (0, 0), (0, -1), 'Helvetica-Bold', 12),
-            ('FONT', (1, 0), (1, -1), 'Helvetica', 11),
-            ('TEXTCOLOR', (0, 0), (0, -1), colors.HexColor('#5CB8EC')),
-            ('TEXTCOLOR', (1, 0), (1, -1), colors.HexColor('#FFFFFF')),
-            ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#262626')),
-            ('ALIGN', (0, 0), (0, -1), 'CENTER'),
+            ('ALIGN', (0, 0), (0, -1), 'LEFT'),
             ('ALIGN', (1, 0), (1, -1), 'LEFT'),
-            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-            ('TOPPADDING', (0, 0), (-1, -1), 12),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 12),
-            ('LEFTPADDING', (0, 0), (-1, -1), 12),
-            ('GRID', (0, 0), (-1, -1), 1, colors.HexColor('#2A2A2A')),
+            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+            ('TOPPADDING', (0, 0), (-1, -1), 4),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
         ]))
         story.append(protocol_table)
 
-    def _get_table_style(self) -> TableStyle:
-        """Get standard table style for parameters."""
-        return TableStyle([
-            ('FONT', (0, 0), (0, -1), 'Helvetica-Bold', 11),
-            ('FONT', (1, 0), (1, -1), 'Helvetica', 11),
-            ('TEXTCOLOR', (0, 0), (0, -1), colors.HexColor('#9AA0A6')),
-            ('TEXTCOLOR', (1, 0), (1, -1), colors.HexColor('#FFFFFF')),
-            ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#2F2F2F')),
-            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-            ('TOPPADDING', (0, 0), (-1, -1), 8),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
-            ('LEFTPADDING', (0, 0), (-1, -1), 12),
-        ])
+    def open_pdf(self, filepath: Path) -> None:
+        """
+        Open a PDF file with the system default viewer.
+
+        Parameters
+        ----------
+        filepath : Path
+            Path to the PDF file to open.
+        """
+        try:
+            if platform.system() == 'Windows':
+                os.startfile(str(filepath))
+            elif platform.system() == 'Darwin':  # macOS
+                subprocess.run(['open', str(filepath)], check=True)
+            else:  # Linux
+                subprocess.run(['xdg-open', str(filepath)], check=True)
+        except Exception:
+            pass  # Silently fail if we can't open the PDF
