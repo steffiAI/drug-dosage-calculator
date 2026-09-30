@@ -172,8 +172,8 @@ class DrugCalculatorApp:
     def __init__(self, root: ctk.CTk) -> None:
         self.root = root
         self.root.title("Drug Concentration Calculator")
-        self.root.geometry("880x580")
-        self.root.minsize(560, 480)
+        self.root.geometry("880x640")
+        self.root.minsize(560, 540)
         self.root.configure(fg_color=BG)
 
         # CTkImage needs a live reference or it gets garbage-collected.
