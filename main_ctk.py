@@ -308,6 +308,7 @@ class DrugCalculatorApp:
             top_bar,
             from_=1.0,
             to=1.5,
+            number_of_steps=10,
             variable=self.font_scale_var,
             command=self._on_font_scale_change,
             width=120,

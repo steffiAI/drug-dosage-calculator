@@ -2,8 +2,7 @@
 Font Manager for centralized font scaling and accessibility.
 
 Provides a single source of truth for all font sizes in the application,
-with support for user-controlled scaling while preserving the calculation
-history table at its base size.
+with support for user-controlled scaling via a slider (1.0x to 1.5x).
 """
 
 import customtkinter as ctk
@@ -50,11 +49,9 @@ class FontManager:
         Returns
         -------
         int
-            Scaled font size (history_table is never scaled by user preference).
+            Scaled font size.
         """
         base_size = self.BASE_SIZES[base_name]
-        if base_name == 'history_table':
-            return base_size
         return round(base_size * self.user_scale)
 
     def get_font(
