@@ -19,10 +19,11 @@ sys.path.insert(0, str(Path(__file__).parent / "src"))
 
 from gui_integration_ctk import AboutDialog, MolecularWeightLookupWidget  # noqa: E402
 from calculators import calculate_stock_from_powder, calculate_dilution, validate_inputs  # noqa: E402
-from data_storage import CalculationHistory  # noqa: E402
+from data_storage import CalculationHistory, UserPreferences  # noqa: E402
 from formatters import (  # noqa: E402
     format_number, validate_decimal_input, format_result_with_unit, convert_to_readable_unit,
 )
+from font_manager import FontManager  # noqa: E402
 
 ctk.set_appearance_mode("dark")
 ctk.set_default_color_theme("blue")
@@ -187,20 +188,10 @@ class DrugCalculatorApp:
 
         self.current_mode: Optional[str] = None
         self.history = CalculationHistory()
+        self.preferences = UserPreferences()
 
-        # Keep family and weight separate - "Segoe UI Semibold" + bold doesn't resolve.
-        self.h1_font = ctk.CTkFont(family="Segoe UI", size=34, weight="bold")
-        self.about_font = ctk.CTkFont(family="Segoe UI", size=14)
-        self.row_title_font = ctk.CTkFont(family="Segoe UI", size=17, weight="bold")
-        self.row_subtitle_font = ctk.CTkFont(family="Consolas", size=13)
-        self.history_title_font = ctk.CTkFont(family="Segoe UI", size=16, weight="bold")
-        self.inset_font = ctk.CTkFont(family="Segoe UI", size=13)
-        self.footer_font = ctk.CTkFont(family="Consolas", size=13)
-        self.button_font = ctk.CTkFont(family="Segoe UI", size=15, weight="bold")
-        self.form_label_font = ctk.CTkFont(family="Segoe UI", size=13)
-        self.form_entry_font = ctk.CTkFont(family="Segoe UI", size=13)
-        self.form_title_font = ctk.CTkFont(family="Segoe UI", size=22, weight="bold")
-        self.form_subtitle_font = ctk.CTkFont(family="Segoe UI", size=13)
+        self.font_manager = FontManager(self.preferences.get_font_scale())
+        self._setup_fonts()
 
         self.main_frame = ctk.CTkFrame(root, fg_color="transparent")
         self.main_frame.grid(row=0, column=0, sticky="nsew")
@@ -208,6 +199,22 @@ class DrugCalculatorApp:
         root.grid_rowconfigure(0, weight=1)
 
         self.show_welcome_screen()
+
+    def _setup_fonts(self) -> None:
+        """Initialize all font objects using FontManager."""
+        fm = self.font_manager
+        self.h1_font = fm.get_font('h1', weight='bold')
+        self.about_font = fm.get_font('about')
+        self.row_title_font = fm.get_font('row_title', weight='bold')
+        self.row_subtitle_font = fm.get_font('small', family='Consolas')
+        self.history_title_font = fm.get_font('history_title', weight='bold')
+        self.inset_font = fm.get_font('body')
+        self.footer_font = fm.get_font('small', family='Consolas')
+        self.button_font = fm.get_font('button', weight='bold')
+        self.form_label_font = fm.get_font('body')
+        self.form_entry_font = fm.get_font('body')
+        self.form_title_font = fm.get_font('form_title', weight='bold')
+        self.form_subtitle_font = fm.get_font('body')
 
     # ------------------------------------------------------------------
     # Shared helpers
@@ -238,6 +245,23 @@ class DrugCalculatorApp:
         self._icon_refs.append(ctk_img)
         return ctk_img
 
+    def _toggle_font_scale(self) -> None:
+        """Toggle between normal and larger fonts, saving the preference."""
+        new_scale = 1.15 if self.larger_fonts_var.get() == 1 else 1.0
+        self.preferences.set_font_scale(new_scale)
+        self.font_manager.set_user_scale(new_scale)
+        self._setup_fonts()
+
+        current_screen = self.current_mode
+        if current_screen == "stock":
+            self.show_stock_calculator()
+        elif current_screen == "dilution":
+            self.show_dilution_calculator()
+        elif current_screen == "history":
+            self.show_history_screen()
+        else:
+            self.show_welcome_screen()
+
     # ------------------------------------------------------------------
     # Welcome screen
     # ------------------------------------------------------------------
@@ -246,8 +270,11 @@ class DrugCalculatorApp:
         self.clear_frame()
         self.current_mode = None
 
+        top_bar = ctk.CTkFrame(self.main_frame, fg_color="transparent")
+        top_bar.pack(anchor="w", fill="x", padx=16, pady=(10, 0))
+
         ctk.CTkButton(
-            self.main_frame,
+            top_bar,
             text=" About",
             image=self._load_icon("info", 17),
             compound="left",
@@ -259,7 +286,19 @@ class DrugCalculatorApp:
             height=30,
             anchor="w",
             command=self.show_about_dialog,
-        ).pack(anchor="w", padx=16, pady=(10, 0))
+        ).pack(side="left")
+
+        self.larger_fonts_var = tk.IntVar(value=1 if self.preferences.get_font_scale() > 1.0 else 0)
+        ctk.CTkCheckBox(
+            top_bar,
+            text="Larger fonts",
+            variable=self.larger_fonts_var,
+            command=self._toggle_font_scale,
+            fg_color=ACCENT,
+            hover_color="#4A9FD6",
+            text_color=MUTED,
+            font=self.about_font,
+        ).pack(side="left", padx=20)
 
         ctk.CTkLabel(
             self.main_frame,
@@ -438,7 +477,7 @@ class DrugCalculatorApp:
             form, 1, "Molecular Weight (g/mol):", self.mw_var, width=120,
             tooltip="Use period (.) for decimal numbers",
         )
-        MolecularWeightLookupWidget(form, self.drug_name_var, self.mw_var, row=1, column_start=2)
+        MolecularWeightLookupWidget(form, self.drug_name_var, self.mw_var, self.font_manager, row=1, column_start=2)
 
         self.conc_var = StringVar()
         self.conc_unit_var = StringVar(value="mM")
@@ -643,7 +682,7 @@ class DrugCalculatorApp:
         ctk.CTkLabel(win, text=title, font=self.form_title_font, text_color=TEXT).pack(pady=(15, 10))
 
         text = ctk.CTkTextbox(
-            win, fg_color=ROW, text_color=TEXT, font=ctk.CTkFont(family="Consolas", size=12), wrap="word"
+            win, fg_color=ROW, text_color=TEXT, font=self.font_manager.get_font('monospace', family='Consolas'), wrap="word"
         )
         text.pack(fill="both", expand=True, padx=15, pady=(0, 10))
         text.insert("1.0", content)
@@ -679,7 +718,7 @@ class DrugCalculatorApp:
             ctk.CTkLabel(
                 confirm,
                 text="Protocol copied to clipboard!",
-                font=ctk.CTkFont(size=13),
+                font=self.font_manager.get_font('body'),
                 text_color=TEXT,
                 wraplength=300
             ).pack(pady=(0, 20), padx=20)
@@ -875,8 +914,9 @@ class DrugCalculatorApp:
             scale = ctk.ScalingTracker.get_widget_scaling(self.root)
         except Exception:
             scale = 1.0
-        row_font_size = round(11 * scale)
-        heading_font_size = round(11 * scale)
+        base_size = self.font_manager.get_size('history_table')
+        row_font_size = round(base_size * scale)
+        heading_font_size = round(base_size * scale)
         row_height = round(34 * scale)
 
         style.configure(
@@ -1234,7 +1274,7 @@ class DrugCalculatorApp:
     # ------------------------------------------------------------------
     def show_about_dialog(self) -> None:
         """Open the About dialog window."""
-        AboutDialog(self.root)
+        AboutDialog(self.root, self.font_manager)
 
 
 def main() -> None:

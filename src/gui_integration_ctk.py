@@ -20,6 +20,7 @@ from typing import Optional
 import customtkinter as ctk
 
 from pubchem_api import PubChemAPI
+from font_manager import FontManager
 
 # Color tokens, matching main_ctk.py's palette.
 BG = "#1E1E1E"
@@ -91,9 +92,11 @@ class AboutDialog:
     ----------
     parent : customtkinter.CTk or customtkinter.CTkToplevel
         Parent window this dialog is opened from.
+    font_manager : FontManager
+        Font manager instance for consistent font sizing.
     """
 
-    def __init__(self, parent) -> None:
+    def __init__(self, parent, font_manager: FontManager) -> None:
         self.dialog = ctk.CTkToplevel(parent)
         self.dialog.title("About")
         self.dialog.geometry("480x560")
@@ -121,7 +124,7 @@ class AboutDialog:
         ctk.CTkLabel(
             info_frame,
             text="Drug Concentration Calculator",
-            font=ctk.CTkFont(family="Segoe UI Semibold", size=16, weight="bold"),
+            font=font_manager.get_font('button', weight='bold'),
             text_color=TEXT,
         ).pack(pady=(0, 15))
 
@@ -135,7 +138,7 @@ class AboutDialog:
         ctk.CTkLabel(
             info_frame,
             text=description,
-            font=ctk.CTkFont(family="Segoe UI", size=12),
+            font=font_manager.get_font('small'),
             justify="center",
             text_color=MUTED,
         ).pack(pady=10)
@@ -146,21 +149,21 @@ class AboutDialog:
         ctk.CTkLabel(
             info_frame,
             text="Developed by",
-            font=ctk.CTkFont(family="Segoe UI", size=11),
+            font=font_manager.get_font('small'),
             text_color=MUTED,
         ).pack()
 
         ctk.CTkLabel(
             info_frame,
             text="Stefanie Strasser",
-            font=ctk.CTkFont(family="Segoe UI Semibold", size=14, weight="bold"),
+            font=font_manager.get_font('body', weight='bold'),
             text_color=ACCENT,
         ).pack(pady=(5, 3))
 
         ctk.CTkLabel(
             info_frame,
             text="s.strasser387@gmail.com",
-            font=ctk.CTkFont(family="Segoe UI", size=11),
+            font=font_manager.get_font('small'),
             text_color=MUTED,
         ).pack(pady=(0, 15))
 
@@ -168,14 +171,14 @@ class AboutDialog:
         ctk.CTkLabel(
             info_frame,
             text="GitHub Repository:",
-            font=ctk.CTkFont(family="Segoe UI", size=11),
+            font=font_manager.get_font('small'),
             text_color=MUTED,
         ).pack(pady=(10, 3))
 
         ctk.CTkLabel(
             info_frame,
             text="github.com/steffiAI/drug-dosage-calculator",
-            font=ctk.CTkFont(family="Segoe UI", size=11, weight="bold"),
+            font=font_manager.get_font('small', weight='bold'),
             text_color=ACCENT,
         ).pack()
 
@@ -185,14 +188,14 @@ class AboutDialog:
         ctk.CTkLabel(
             info_frame,
             text="Licensed under MIT License",
-            font=ctk.CTkFont(family="Segoe UI", size=10),
+            font=font_manager.get_font('small'),
             text_color=MUTED,
         ).pack(pady=(5, 0))
 
         ctk.CTkLabel(
             info_frame,
             text="Open-source software for the research community",
-            font=ctk.CTkFont(family="Segoe UI", size=10),
+            font=font_manager.get_font('small'),
             text_color=MUTED,
         ).pack()
 
@@ -203,7 +206,7 @@ class AboutDialog:
             command=self.dialog.destroy,
             width=140,
             height=36,
-            font=ctk.CTkFont(family="Segoe UI Semibold", size=12, weight="bold"),
+            font=font_manager.get_font('small', weight='bold'),
             fg_color=CARD,
             hover_color="#2E2E2E",
             text_color=TEXT,
@@ -238,6 +241,8 @@ class MolecularWeightLookupWidget:
         Variable holding the drug name or CAS number to search.
     mw_var : tkinter.StringVar
         Variable to fill with the looked-up molecular weight.
+    font_manager : FontManager
+        Font manager instance for consistent font sizing.
     row : int, default=0
         Grid row for placement.
     column_start : int, default=3
@@ -249,12 +254,14 @@ class MolecularWeightLookupWidget:
         parent_frame: ctk.CTkFrame,
         drug_name_var,
         mw_var,
+        font_manager: FontManager,
         row: int = 0,
         column_start: int = 3,
     ) -> None:
         self.frame = parent_frame
         self.drug_name_var = drug_name_var
         self.mw_var = mw_var
+        self.font_manager = font_manager
         self.api = PubChemAPI()
         self.current_result: Optional[dict] = None
 
@@ -265,14 +272,14 @@ class MolecularWeightLookupWidget:
             fg_color=ROW,
             hover_color=ROW_HOVER,
             text_color=ACCENT,
-            font=ctk.CTkFont(family="Segoe UI", size=12, weight="bold"),
+            font=font_manager.get_font('small', weight='bold'),
             width=120,
             height=28,
         )
         self.lookup_button.grid(row=row, column=column_start, padx=(8, 16), pady=2, sticky="e")
 
         self.status_label = ctk.CTkLabel(
-            parent_frame, text="", font=ctk.CTkFont(family="Segoe UI", size=11), text_color=MUTED,
+            parent_frame, text="", font=font_manager.get_font('small'), text_color=MUTED,
             justify="left", anchor="w",
         )
         self.status_label.grid(
@@ -417,7 +424,7 @@ class MolecularWeightLookupWidget:
         ctk.CTkLabel(
             header,
             text=display_name,
-            font=ctk.CTkFont(family="Segoe UI", size=16, weight="bold"),
+            font=self.font_manager.get_font('button', weight='bold'),
             text_color=TEXT,
         ).pack(pady=16)
 
@@ -437,7 +444,7 @@ class MolecularWeightLookupWidget:
         )
 
         text = ctk.CTkTextbox(
-            win, fg_color=BG, text_color=TEXT, font=ctk.CTkFont(family="Segoe UI", size=12), wrap="word"
+            win, fg_color=BG, text_color=TEXT, font=self.font_manager.get_font('small'), wrap="word"
         )
         text.pack(fill="both", expand=True, padx=15, pady=15)
         text.insert("1.0", info_text)

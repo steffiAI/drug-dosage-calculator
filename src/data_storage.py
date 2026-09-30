@@ -1,7 +1,8 @@
 """
 Drug Dosage Calculator - Data storage functionality.
 
-This module handles saving and loading calculation history to/from JSON files.
+This module handles saving and loading calculation history and user preferences
+to/from JSON files.
 """
 
 import json
@@ -136,10 +137,91 @@ class CalculationHistory:
     def get_calculation_count(self) -> int:
         """
         Get total number of saved calculations.
-        
+
         Returns
         -------
         int
             Number of calculations in history
         """
         return len(self._load_history())
+
+
+class UserPreferences:
+    """
+    Manage user preferences storage and retrieval.
+
+    Preferences are stored as JSON in the data/ directory.
+    """
+
+    def __init__(self, data_dir: str = "data"):
+        """
+        Initialize the user preferences manager.
+
+        Parameters
+        ----------
+        data_dir : str, default="data"
+            Directory to store the preferences JSON file
+        """
+        self.data_dir = Path(data_dir)
+        self.data_dir.mkdir(exist_ok=True)
+        self.prefs_file = self.data_dir / "user_preferences.json"
+
+        if not self.prefs_file.exists():
+            self._save_preferences({'font_scale': 1.0})
+
+    def _save_preferences(self, prefs: Dict[str, Any]) -> None:
+        """
+        Save preferences to JSON file.
+
+        Parameters
+        ----------
+        prefs : dict
+            Preferences dictionary to save
+        """
+        try:
+            with open(self.prefs_file, 'w') as f:
+                json.dump(prefs, f, indent=2)
+        except Exception as e:
+            raise IOError(f"Failed to save preferences: {e}")
+
+    def _load_preferences(self) -> Dict[str, Any]:
+        """
+        Load preferences from JSON file.
+
+        Returns
+        -------
+        dict
+            Preferences dictionary
+        """
+        try:
+            with open(self.prefs_file, 'r') as f:
+                return json.load(f)
+        except (json.JSONDecodeError, FileNotFoundError):
+            return {'font_scale': 1.0}
+        except Exception as e:
+            raise IOError(f"Failed to load preferences: {e}")
+
+    def get_font_scale(self) -> float:
+        """
+        Get the user's font scale preference.
+
+        Returns
+        -------
+        float
+            Font scale factor (1.0 = default, 1.15 = larger)
+        """
+        prefs = self._load_preferences()
+        return prefs.get('font_scale', 1.0)
+
+    def set_font_scale(self, scale: float) -> None:
+        """
+        Set the user's font scale preference.
+
+        Parameters
+        ----------
+        scale : float
+            Font scale factor (1.0 = default, 1.15 = larger)
+        """
+        prefs = self._load_preferences()
+        prefs['font_scale'] = scale
+        self._save_preferences(prefs)
