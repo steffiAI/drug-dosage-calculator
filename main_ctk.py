@@ -129,6 +129,31 @@ def apply_dark_titlebar(window) -> None:
         pass
 
 
+def center_window(window, parent=None) -> None:
+    """
+    Center a window on screen or over a parent window.
+
+    Parameters
+    ----------
+    window : tkinter window
+        Window to center.
+    parent : tkinter window, optional
+        Parent window to center over. If None, centers on screen.
+    """
+    window.update_idletasks()
+
+    if parent is None:
+        screen_width = window.winfo_screenwidth()
+        screen_height = window.winfo_screenheight()
+        x = (screen_width // 2) - (window.winfo_width() // 2)
+        y = (screen_height // 2) - (window.winfo_height() // 2)
+    else:
+        x = parent.winfo_rootx() + (parent.winfo_width() // 2) - (window.winfo_width() // 2)
+        y = parent.winfo_rooty() + (parent.winfo_height() // 2) - (window.winfo_height() // 2)
+
+    window.geometry(f"+{x}+{y}")
+
+
 class DrugCalculatorApp:
     """
     Main application window for the drug dosage calculator (CTk version).
@@ -158,6 +183,7 @@ class DrugCalculatorApp:
 
         # Immersive dark title bar (Windows only; no-ops elsewhere).
         apply_dark_titlebar(self.root)
+        center_window(self.root)
 
         self.current_mode: Optional[str] = None
         self.history = CalculationHistory()
@@ -612,6 +638,7 @@ class DrugCalculatorApp:
         except Exception:
             pass
         apply_dark_titlebar(win)
+        center_window(win, self.root)
 
         ctk.CTkLabel(win, text=title, font=self.form_title_font, text_color=TEXT).pack(pady=(15, 10))
 
@@ -640,6 +667,7 @@ class DrugCalculatorApp:
             except Exception:
                 pass
             apply_dark_titlebar(confirm)
+            center_window(confirm, win)
 
             ctk.CTkLabel(
                 confirm,
@@ -1189,10 +1217,7 @@ class DrugCalculatorApp:
             fg_color=ROW, hover_color=ROW_HOVER, text_color=TEXT, font=self.button_font, width=90,
         ).grid(row=0, column=1, padx=6)
 
-        win.update_idletasks()
-        x = self.root.winfo_rootx() + (self.root.winfo_width() // 2) - (win.winfo_width() // 2)
-        y = self.root.winfo_rooty() + (self.root.winfo_height() // 2) - (win.winfo_height() // 2)
-        win.geometry(f"+{x}+{y}")
+        center_window(win, self.root)
 
         win.wait_window()
         return result["confirmed"]

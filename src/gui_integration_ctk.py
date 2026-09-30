@@ -58,6 +58,31 @@ def apply_dark_titlebar(window) -> None:
         pass
 
 
+def center_window(window, parent=None) -> None:
+    """
+    Center a window on screen or over a parent window.
+
+    Parameters
+    ----------
+    window : tkinter window
+        Window to center.
+    parent : tkinter window, optional
+        Parent window to center over. If None, centers on screen.
+    """
+    window.update_idletasks()
+
+    if parent is None:
+        screen_width = window.winfo_screenwidth()
+        screen_height = window.winfo_screenheight()
+        x = (screen_width // 2) - (window.winfo_width() // 2)
+        y = (screen_height // 2) - (window.winfo_height() // 2)
+    else:
+        x = parent.winfo_rootx() + (parent.winfo_width() // 2) - (window.winfo_width() // 2)
+        y = parent.winfo_rooty() + (parent.winfo_height() // 2) - (window.winfo_height() // 2)
+
+    window.geometry(f"+{x}+{y}")
+
+
 class AboutDialog:
     """
     About dialog window shown from the "About" button.
@@ -186,11 +211,7 @@ class AboutDialog:
             border_color=BORDER,
         ).pack(pady=20)
 
-        # Center on the main app window, not the screen
-        self.dialog.update_idletasks()
-        x = parent.winfo_rootx() + (parent.winfo_width() // 2) - 240
-        y = parent.winfo_rooty() + (parent.winfo_height() // 2) - 280
-        self.dialog.geometry(f"+{x}+{y}")
+        center_window(self.dialog)
 
     @staticmethod
     def _separator(parent: ctk.CTkFrame) -> None:
@@ -426,8 +447,5 @@ class MolecularWeightLookupWidget:
             win, text="Close", command=win.destroy, fg_color=ROW, hover_color=ROW_HOVER, text_color=TEXT
         ).pack(pady=(0, 15))
 
-        win.update_idletasks()
         parent_win = self.frame.winfo_toplevel()
-        x = parent_win.winfo_rootx() + (parent_win.winfo_width() // 2) - (win.winfo_width() // 2)
-        y = parent_win.winfo_rooty() + (parent_win.winfo_height() // 2) - (win.winfo_height() // 2)
-        win.geometry(f"+{x}+{y}")
+        center_window(win, parent_win)
