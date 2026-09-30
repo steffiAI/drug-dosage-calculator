@@ -12,15 +12,17 @@ A Python GUI application for calculation of stock and working dilutions. This to
 - ✅ **Working Solution Calculator**: Dilute stock solutions to working concentrations
 - ✅ **PubChem integration**: Automatic molecular weight lookup by drug name or CAS number
 - ✅ **Calculation History**: Automatically saves all calculations with timestamps, with search, filtering, and sortable columns
+- ✅ **PDF Export**: Professional print-optimized protocols with multi-select export, sort options, and auto-open
+- ✅ **Multi-select Export**: Select multiple calculations and export as a single PDF with customizable formatting
+- ✅ **Adjustable Font Scaling**: User-configurable font size (100%-150%) for improved readability
 - ✅ **Unit Conversions**: Support for M, mM, µM, nM (concentration) and L, mL, µL (volume)
 - ✅ **Solvent Tracking**: Record which solvent was used for each preparation
-- ✅ **Modern dark-themed GUI**: Built with CustomTkinter
+- ✅ **Modern dark-themed GUI**: Built with CustomTkinter with consistent dark mode across all dialogs
 
 ### Coming Soon
 - Serial dilution calculator
 - Custom unit preferences
-- PDF export with formatted protocols
-- Exporting selected history entries together
+- Batch calculations
 
 ## Requirements
 
@@ -91,11 +93,15 @@ Use this to dilute stock solutions to working concentrations:
 - Target: 20 µM in 500 µL media
 - Result: Add 1 µL stock to 499 µL media (500x dilution)
 
-### Viewing History
+### Viewing & Exporting History
 
 - Click "View Calculation History" from the main menu
 - Search by drug name or solvent, filter by calculation type, and click any column header to sort by it
 - Double-click an entry (or select it and click "View Details") to see the full protocol again
+- **Export to PDF**: Click checkboxes to select one or more calculations, then click "Export PDF"
+  - Single calculation: Saves immediately with editable filename
+  - Multiple calculations: Choose sort order (by drug name, date, type, or table order) and page break options
+  - PDFs are optimized for printing (clean white background, minimal design) and auto-open after generation
 
 ## Project Structure
 
@@ -105,12 +111,15 @@ drug-dosage-calculator/
 ├── assets/                        # Icons, app icon, hero image
 ├── src/
 │   ├── calculators.py             # Core calculation functions
-│   ├── data_storage.py            # History management
+│   ├── data_storage.py            # History & preferences management
+│   ├── font_manager.py            # Centralized font scaling system
 │   ├── formatters.py              # Number/unit formatting
 │   ├── gui_integration_ctk.py     # PubChem lookup widget, About dialog
+│   ├── pdf_export.py              # PDF protocol generation
 │   └── pubchem_api.py             # PubChem API wrapper
 ├── data/
-│   └── calculation_history.json   # Saved calculations (auto-generated)
+│   ├── calculation_history.json   # Saved calculations (auto-generated)
+│   └── user_preferences.json      # User settings (auto-generated)
 ├── DrugCalculator-ctk-windows.spec # PyInstaller build config
 ├── README.md
 ├── LICENSE
